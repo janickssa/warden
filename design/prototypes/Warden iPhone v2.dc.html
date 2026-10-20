@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-1a631895-c413-4e2c-b774-e29b701f5465/styles.css">
+<script src="_ds/nocturne-1a631895-c413-4e2c-b774-e29b701f5465/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+html,body{margin:0;min-height:100%;background:var(--color-bg)}
+a{color:var(--color-accent)} a:hover{color:var(--color-accent-300)}
+@keyframes wpulse{0%,100%{opacity:.35}50%{opacity:.75}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;gap:56px;align-items:flex-start;justify-content:center;flex-wrap:wrap;padding:40px 32px;font-family:var(--font-body);color:var(--color-text);background:radial-gradient(ellipse at 70% 20%,var(--color-surface),var(--color-bg) 65%)">
+
+<div style="width:260px;display:flex;flex-direction:column;gap:var(--space-6);padding-top:24px">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="display:flex;align-items:center;gap:8px"><i class="ph ph-shield-check" style="font-size:20px;color:var(--color-accent)"></i><span style="font-size:17px;font-weight:500">Warden for iPhone</span></div>
+    <div style="font-size:13px;color:var(--color-neutral-400);text-wrap:pretty">Clickable prototype. Approve with Face ID or with edits, open any step’s full live output, hold the kill switch for 2 s, act on lock-screen notifications.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <h6 style="margin:0;color:var(--color-neutral-400)">Start from</h6>
+    <sc-for list="{{ sceneBtns }}" as="b" hint-placeholder-count="3">
+      <button onClick="{{ b.onClick }}" class="btn btn-secondary" style="justify-content:flex-start;gap:10px;padding:9px 12px;border-color:{{ b.border }};color:{{ b.fg }}"><i class="ph {{ b.icon }}" style="font-size:16px"></i>{{ b.label }}</button>
+    </sc-for>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--color-neutral-500)">
+    <span>States (Warden unreachable, dev2 agent behind or offline, loading) are in Tweaks. Lockdown: hold the button in Settings or Activity, or use the “Agent refused a step” notification.</span>
+    <a href="Warden Dashboard v2.dc.html" style="font-size:13px">Open the web dashboard →</a>
+  </div>
+</div>
+
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="position:absolute;inset:0;z-index:1;background:var(--color-bg);font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;color:var(--color-text);overflow:hidden">
+
+  <sc-if value="{{ isLock }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--color-accent-800),var(--color-bg) 70%);display:flex;flex-direction:column;align-items:center;padding:64px 12px 0">
+      <i class="ph-fill ph-lock-simple" style="font-size:16px;color:var(--color-neutral-200)"></i>
+      <div style="font-size:18px;font-weight:500;margin-top:8px;color:var(--color-neutral-200)">{{ lockDate }}</div>
+      <div style="font-size:92px;font-weight:600;line-height:1;letter-spacing:-0.02em;color:var(--color-neutral-100)">{{ lockTime }}</div>
+      <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-top:auto;margin-bottom:96px;min-height:0;overflow:auto;padding-top:16px">
+        <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="4">
+          <div style="border-radius:22px;background:color-mix(in srgb,var(--color-neutral-800) 78%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden">
+            <button onClick="{{ n.onTap }}" style="display:flex;gap:10px;width:100%;padding:12px 14px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer">
+              <span style="width:38px;height:38px;flex:none;border-radius:9px;background:var(--color-bg);display:grid;place-items:center;border:1px solid var(--color-neutral-700)"><i class="ph ph-shield-check" style="font-size:20px;color:var(--color-accent)"></i></span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                <span style="display:flex;gap:8px;font-size:15px;font-weight:600"><span style="flex:1;color:{{ n.titleColor }}">{{ n.title }}</span><span style="font-size:13px;font-weight:400;color:var(--color-neutral-400)">{{ n.when }}</span></span>
+                <span style="font-size:15px;line-height:1.3;color:var(--color-neutral-100);text-wrap:pretty">{{ n.body }}</span>
+              </span>
+            </button>
+            <sc-if value="{{ n.expanded }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;border-top:1px solid var(--color-neutral-700)">
+                <sc-for list="{{ n.actions }}" as="a" hint-placeholder-count="2">
+                  <button onClick="{{ a.onClick }}" style="display:flex;align-items:center;justify-content:space-between;min-height:46px;padding:0 16px;border:0;border-bottom:1px solid var(--color-neutral-800);background:transparent;color:{{ a.color }};font:inherit;font-size:16px;cursor:pointer;text-align:left">{{ a.label }}<i class="ph {{ a.icon }}" style="font-size:18px"></i></button>
+                </sc-for>
+                <sc-if value="{{ n.openOnly }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 16px 12px;font-size:13px;color:var(--color-neutral-400)">High-risk plans must be reviewed in the app.</div></sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <div style="text-align:center;font-size:12px;color:var(--color-neutral-400);padding-top:4px">Tap a notification to see its actions</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isSignin }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:120px 24px 60px;gap:14px">
+      <i class="ph ph-shield-check" style="font-size:52px;color:var(--color-accent)"></i>
+      <div style="font-size:32px;font-weight:600;letter-spacing:-0.01em">Sign in to Warden</div>
+      <div style="font-size:16px;color:var(--color-neutral-300);text-wrap:pretty">Approve what Claude wants to run on your servers. Connect WireGuard first.</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:20px">
+        <label style="font-size:13px;color:var(--color-neutral-400)">Server</label>
+        <div style="min-height:48px;display:flex;align-items:center;padding:0 14px;border-radius:12px;background:var(--color-surface);font-family:ui-monospace,'SF Mono',monospace;font-size:15px">https://warden.lan</div>
+      </div>
+      <button onClick="{{ signIn }}" style="margin-top:auto;min-height:52px;border-radius:14px;border:1px solid var(--color-accent);background:transparent;color:var(--color-accent);font:inherit;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><i class="ph ph-fingerprint" style="font-size:20px"></i>Sign in with passkey</button>
+      <div style="text-align:center;font-size:13px;color:var(--color-neutral-500)">No password. Your passkey stays on this iPhone.</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+
+    <sc-if value="{{ inTabs }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;top:0;left:0;right:0;bottom:84px;overflow:auto;padding:54px 0 24px">
+        <sc-if value="{{ lockdown }}" hint-placeholder-val="{{ false }}"><div style="margin:6px 16px 0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,oklch(0.70 0.18 25) 16%,transparent);font-size:14px;line-height:1.3"><i class="ph-fill ph-lock-simple" style="font-size:18px;color:oklch(0.70 0.18 25)"></i><span style="flex:1">Lockdown active since {{ lockSince }} · every agent is read-only</span></div></sc-if>
+        <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:6px 16px 0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,oklch(0.81 0.13 80) 14%,transparent);font-size:14px">
+            <i class="ph ph-wifi-slash" style="font-size:18px;color:oklch(0.81 0.13 80)"></i>
+            <span style="flex:1;line-height:1.3">Can’t reach Warden. Is WireGuard connected? <span style="color:var(--color-neutral-400)">Stale · {{ staleAt }}</span></span>
+            <button onClick="{{ retry }}" style="min-height:44px;padding:0 4px;border:0;background:transparent;color:var(--color-accent);font:inherit;font-weight:600;cursor:pointer">{{ retryLabel }}</button>
+          </div>
+        </sc-if>
+        <div style="padding:10px 16px 12px;font-size:34px;font-weight:700;letter-spacing:-0.01em">{{ tabTitle }}</div>
+
+        <sc-if value="{{ loading }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px">
+            <div style="height:112px;border-radius:16px;background:var(--color-surface);animation:wpulse 1.4s infinite"></div>
+            <div style="height:112px;border-radius:16px;background:var(--color-surface);animation:wpulse 1.4s .2s infinite"></div>
+            <div style="height:112px;border-radius:16px;background:var(--color-surface);animation:wpulse 1.4s .4s infinite"></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ tApprovals }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px">
+            <sc-for list="{{ pending }}" as="c" hint-placeholder-count="0">
+              <button onClick="{{ c.onOpen }}" style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:16px;border:0;background:var(--color-surface);color:inherit;font:inherit;text-align:left;cursor:pointer">
+                <span style="display:flex;gap:10px;align-items:baseline;width:100%"><span style="flex:1;font-size:17px;font-weight:600;line-height:1.25;text-wrap:pretty">{{ c.goal }}</span><i class="ph ph-caret-right" style="color:var(--color-neutral-600)"></i></span>
+                <span style="font-size:14px;color:var(--color-neutral-400)">{{ c.target }} · {{ c.nSteps }} steps · {{ c.requested }}</span>
+                <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="padding:2px 8px;border-radius:6px;font-size:13px;background:{{ c.risk.bg }};color:{{ c.risk.fg }}">{{ c.risk.text }}</span>
+                  <span style="font-size:13px;color:{{ c.verdict.fg }}">{{ c.verdict.text }}</span>
+                  <span style="margin-left:auto;font-size:13px;font-variant-numeric:tabular-nums;color:{{ c.expColor }}"><i class="ph ph-timer"></i> {{ c.expiresIn }}</span>
+                </span>
+                <sc-if value="{{ c.revises }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-300)">Revision · {{ c.changed }} changed steps</span></sc-if>
+                <sc-if value="{{ c.agentShort }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:{{ c.warnColor }}"><i class="ph ph-warning"></i> {{ c.agentShort }}</span></sc-if>
+              </button>
+            </sc-for>
+            <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:60px 8px;display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center"><i class="ph ph-check-circle" style="font-size:36px;color:var(--color-neutral-500)"></i><div style="font-size:17px;font-weight:600">No plans waiting</div><div style="font-size:15px;color:var(--color-neutral-400)">Claude hasn’t asked for anything.</div></div>
+            </sc-if>
+            <sc-if value="{{ hasDecided }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-neutral-400);padding:14px 4px 2px">Recently decided</div>
+              <div style="border-radius:16px;background:var(--color-surface);overflow:hidden">
+                <sc-for list="{{ decided }}" as="r" hint-placeholder-count="1">
+                  <button onClick="{{ r.onOpen }}" style="display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 14px;border:0;border-bottom:1px solid var(--color-neutral-800);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer">
+                    <span style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;line-height:1.3">{{ r.goal }}</span><span style="font-size:13px;color:{{ r.status.fg }}">{{ r.status.text }} · {{ r.when }}</span></span>
+                    <i class="ph ph-caret-right" style="color:var(--color-neutral-600)"></i>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ tActivity }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px">
+            <sc-for list="{{ runningCards }}" as="r" hint-placeholder-count="0">
+              <div style="display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:16px;background:var(--color-surface)">
+                <button onClick="{{ r.onOpen }}" style="display:flex;flex-direction:column;gap:6px;border:0;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer">
+                  <span style="font-size:13px;color:var(--color-accent-300)">◌ Running · {{ r.target }}</span>
+                  <span style="font-size:17px;font-weight:600;line-height:1.25">{{ r.goal }}</span>
+                  <span style="font-size:14px;color:var(--color-neutral-400)">Step {{ r.stepN }} of {{ r.total }} · {{ r.purpose }}</span>
+                </button>
+                <button onClick="{{ r.onOut }}" style="align-self:flex-start;min-height:44px;display:flex;align-items:center;gap:6px;padding:0 2px;border:0;background:transparent;color:var(--color-accent);font:inherit;font-size:15px;cursor:pointer"><i class="ph ph-terminal-window" style="font-size:18px"></i>Live output</button>
+                <div style="height:6px;border-radius:3px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:{{ r.pct }};background:var(--color-accent);border-radius:3px;transition:width .3s"></div></div>
+                <button onPointerDown="{{ holdStart }}" onPointerUp="{{ holdEnd }}" onPointerLeave="{{ holdEnd }}" onContextMenu="{{ prevent }}" disabled="{{ offline }}" style="position:relative;overflow:hidden;min-height:48px;border-radius:12px;border:1px solid oklch(0.70 0.18 25);background:transparent;color:oklch(0.70 0.18 25);font:inherit;font-size:16px;font-weight:600;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none">
+                  <span style="position:absolute;left:0;top:0;bottom:0;width:{{ holdPct }};background:color-mix(in srgb,oklch(0.70 0.18 25) 28%,transparent)"></span>
+                  <span style="position:relative;display:inline-flex;align-items:center;gap:8px"><i class="ph-fill ph-stop-circle" style="font-size:18px"></i>{{ holdLabel }}</span>
+                </button>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noLockdown }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:16px;background:var(--color-surface)">
+                <span style="font-size:16px;font-weight:600">Something looks wrong?</span>
+                <span style="font-size:14px;line-height:1.4;color:var(--color-neutral-300)">Lock down every agent. Running plans stop and only read-only commands work.</span>
+                <button onPointerDown="{{ lockHoldStart }}" onPointerUp="{{ holdEnd }}" onPointerLeave="{{ holdEnd }}" onContextMenu="{{ prevent }}" disabled="{{ offline }}" style="position:relative;overflow:hidden;min-height:50px;border-radius:12px;border:1px solid oklch(0.70 0.18 25);background:transparent;color:oklch(0.70 0.18 25);font:inherit;font-size:16px;font-weight:600;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ lockPct }};background:color-mix(in srgb,oklch(0.70 0.18 25) 28%,transparent)"></span><span style="position:relative;display:inline-flex;align-items:center;gap:8px"><i class="ph-fill ph-lock-simple" style="font-size:18px"></i>{{ lockLabel }}</span></button>
+              </div>
+            </sc-if>
+            <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-neutral-400);padding:6px 4px 2px">Live feed</div>
+            <div style="border-radius:16px;background:var(--color-surface);overflow:hidden">
+              <sc-for list="{{ feed }}" as="f" hint-placeholder-count="6">
+                <div style="display:flex;gap:12px;padding:11px 14px;border-bottom:1px solid var(--color-neutral-800)">
+                  <i class="ph {{ f.icon }}" style="font-size:18px;margin-top:2px;color:{{ f.color }}"></i>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                    <span style="font-family:{{ f.font }};font-size:14px;line-height:1.35;word-break:break-word">{{ f.text }}</span>
+                    <span style="font-size:12px;color:var(--color-neutral-400)">{{ f.label }} · {{ f.client }} · {{ f.target }} · {{ f.rel }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ tSchedules }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 16px">
+            <div style="border-radius:16px;background:var(--color-surface);overflow:hidden">
+              <sc-for list="{{ schedules }}" as="s" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--color-neutral-800)">
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                    <span style="font-family:ui-monospace,'SF Mono',monospace;font-size:14px">{{ s.name }}</span>
+                    <span style="font-size:14px;color:var(--color-neutral-300)">{{ s.plain }} · {{ s.target }}</span>
+                    <span style="font-size:13px;color:var(--color-neutral-400)">Next {{ s.nextText }} · <span style="color:{{ s.res.fg }}">{{ s.res.text }}</span></span>
+                  </div>
+                  <button onClick="{{ s.onToggle }}" aria-label="{{ s.aria }}" style="width:51px;height:31px;flex:none;border-radius:16px;border:0;padding:2px;background:{{ s.trackBg }};cursor:pointer;display:flex;justify-content:{{ s.knobSide }}"><span style="width:27px;height:27px;border-radius:50%;background:var(--color-neutral-100)"></span></button>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font-size:13px;color:var(--color-neutral-400);padding:0 4px;text-wrap:pretty">Pausing needs no approval. Resuming a template that changed since you approved it needs a new approval.</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ tSettings }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:0 16px">
+            <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-neutral-400);padding:0 4px">Lockdown</div>
+            <div style="border-radius:16px;background:var(--color-surface);padding:14px;display:flex;flex-direction:column;gap:10px">
+              <sc-if value="{{ lockdown }}" hint-placeholder-val="{{ false }}"><div style="font-size:15px;line-height:1.4"><span style="color:oklch(0.70 0.18 25)">■ Lockdown active</span> since {{ lockSince }}. Lift it from the dashboard with the offline key.</div></sc-if>
+              <sc-if value="{{ noLockdown }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:14px;line-height:1.4;color:var(--color-neutral-300)">Kills running plans and makes every agent read-only. Lifting needs the offline key, so it can’t be undone from this phone.</div>
+                <button onPointerDown="{{ lockHoldStart }}" onPointerUp="{{ holdEnd }}" onPointerLeave="{{ holdEnd }}" onContextMenu="{{ prevent }}" disabled="{{ offline }}" style="position:relative;overflow:hidden;min-height:50px;border-radius:12px;border:1px solid oklch(0.70 0.18 25);background:transparent;color:oklch(0.70 0.18 25);font:inherit;font-size:16px;font-weight:600;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ lockPct }};background:color-mix(in srgb,oklch(0.70 0.18 25) 28%,transparent)"></span><span style="position:relative;display:inline-flex;align-items:center;gap:8px"><i class="ph-fill ph-lock-simple" style="font-size:18px"></i>{{ lockLabel }}</span></button>
+              </sc-if>
+            </div>
+            <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-neutral-400);padding:14px 4px 0">Agents</div>
+            <div style="border-radius:16px;background:var(--color-surface);overflow:hidden">
+              <sc-for list="{{ agentRows }}" as="a" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;border-bottom:1px solid var(--color-neutral-800)">
+                  <span style="font-size:16px;width:18px;text-align:center;color:{{ a.color }}">{{ a.icon }}</span>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:16px">{{ a.name }}</span><span style="font-size:13px;color:var(--color-neutral-400)">{{ a.meta }}</span></div>
+                  <span style="font-family:ui-monospace,'SF Mono',monospace;font-size:14px;color:{{ a.color }}">{{ a.pv }}</span>
+                </div>
+              </sc-for>
+              <div style="display:flex;align-items:center;gap:10px;min-height:50px;padding:0 14px;font-size:16px"><span style="flex:1">Policy rollout</span><span style="font-size:15px;color:{{ polColor }}">{{ polText }}</span></div>
+            </div>
+            <div style="font-size:13px;color:var(--color-neutral-500);padding:0 4px;text-wrap:pretty">Read-only. Publish rule changes from the dashboard.</div>
+            <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-neutral-400);padding:14px 4px 0">Server</div>
+            <div style="border-radius:16px;background:var(--color-surface);overflow:hidden">
+              <div style="display:flex;align-items:center;min-height:50px;padding:0 14px;border-bottom:1px solid var(--color-neutral-800);font-size:16px"><span style="flex:1">URL</span><span style="font-family:ui-monospace,'SF Mono',monospace;font-size:14px;color:var(--color-neutral-300)">https://warden.lan</span></div>
+              <div style="display:flex;align-items:center;min-height:50px;padding:0 14px;border-bottom:1px solid var(--color-neutral-800);font-size:16px"><span style="flex:1">Signed in</span><span style="font-size:15px;color:var(--color-neutral-300)"><i class="ph ph-fingerprint"></i> Passkey · this iPhone</span></div>
+              <button onClick="{{ testConn }}" style="display:flex;align-items:center;width:100%;min-height:50px;padding:0 14px;border:0;background:transparent;font:inherit;font-size:16px;color:var(--color-accent);cursor:pointer;text-align:left"><span style="flex:1">Test connection</span><span style="font-size:15px;color:{{ connColor }}">{{ connText }}</span></button>
+            </div>
+            <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-neutral-400);padding:14px 4px 0">Notifications</div>
+            <div style="border-radius:16px;background:var(--color-surface);overflow:hidden">
+              <sc-for list="{{ notifPrefs }}" as="np" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:12px;min-height:50px;padding:6px 14px;border-bottom:1px solid var(--color-neutral-800)">
+                  <span style="flex:1;font-size:16px">{{ np.label }}</span>
+                  <button onClick="{{ np.onToggle }}" aria-label="{{ np.label }}" style="width:51px;height:31px;flex:none;border-radius:16px;border:0;padding:2px;background:{{ np.trackBg }};cursor:pointer;display:flex;justify-content:{{ np.knobSide }}"><span style="width:27px;height:27px;border-radius:50%;background:var(--color-neutral-100)"></span></button>
+                </div>
+              </sc-for>
+            </div>
+            <button onClick="{{ signOut }}" style="margin-top:18px;min-height:50px;border-radius:16px;border:0;background:var(--color-surface);color:oklch(0.70 0.18 25);font:inherit;font-size:16px;cursor:pointer">Sign out</button>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;height:84px;padding:6px 8px 30px;display:flex;background:color-mix(in srgb,var(--color-surface) 88%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--color-neutral-800)">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.onClick }}" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:transparent;color:{{ t.color }};font:inherit;font-size:10px;font-weight:500;cursor:pointer">
+            <i class="{{ t.iconClass }}" style="font-size:26px"></i>{{ t.label }}
+            <sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:oklch(0.70 0.18 25);color:var(--color-neutral-100);font-size:11px;font-weight:600;display:grid;place-items:center">{{ t.badge }}</span></sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ inDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;top:0;left:0;right:0;height:100px;padding:54px 8px 0;display:flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--color-bg) 92%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--color-neutral-800);z-index:3">
+        <button onClick="{{ back }}" style="min-height:44px;display:flex;align-items:center;gap:2px;padding:0 6px;border:0;background:transparent;color:var(--color-accent);font:inherit;font-size:17px;cursor:pointer"><i class="ph ph-caret-left" style="font-size:22px"></i>{{ backLabel }}</button>
+        <span style="flex:1;text-align:center;margin-right:84px;font-size:15px;font-weight:600;font-family:ui-monospace,'SF Mono',monospace">{{ P.id }}</span>
+      </div>
+      <div ref="{{ detailRef }}" onScroll="{{ onDetailScroll }}" style="position:absolute;top:100px;left:0;right:0;bottom:{{ bottomInset }};overflow:auto;padding:16px 16px 28px;display:flex;flex-direction:column;gap:18px">
+        <sc-if value="{{ lockdown }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,oklch(0.70 0.18 25) 16%,transparent);font-size:14px;line-height:1.3"><i class="ph-fill ph-lock-simple" style="font-size:18px;color:oklch(0.70 0.18 25)"></i><span style="flex:1">Lockdown active since {{ lockSince }} · every agent is read-only</span></div></sc-if>
+        <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,oklch(0.81 0.13 80) 14%,transparent);font-size:14px"><i class="ph ph-wifi-slash" style="color:oklch(0.81 0.13 80)"></i><span style="flex:1">Can’t reach Warden. Read-only, stale since {{ staleAt }}.</span></div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:24px;font-weight:700;line-height:1.2;letter-spacing:-0.01em;text-wrap:pretty">{{ P.goal }}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <span style="padding:2px 8px;border-radius:6px;font-size:13px;background:{{ P.status.bg }};color:{{ P.status.fg }}">{{ P.status.text }}</span>
+            <span style="padding:2px 8px;border-radius:6px;font-size:13px;background:{{ P.risk.bg }};color:{{ P.risk.fg }}">{{ P.risk.text }}</span>
+            <sc-if value="{{ P.showExpiry }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;font-variant-numeric:tabular-nums;color:{{ P.expColor }}"><i class="ph ph-timer"></i> {{ P.expiresIn }}</span></sc-if>
+          </div>
+          <div style="font-size:14px;color:var(--color-neutral-400)">{{ P.target }} · {{ P.requested }} · proposed {{ P.createdAt }}</div>
+          <sc-if value="{{ P.revises }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:var(--color-accent-300)">Revision of {{ P.revises }} · {{ P.changed }} changed steps</div></sc-if>
+          <sc-if value="{{ P.agentWarn }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border-radius:12px;background:{{ P.warnBg }};font-size:14px;line-height:1.35;text-wrap:pretty"><i class="ph ph-warning" style="color:{{ P.warnColor }}"></i> {{ P.agentWarn }}</div></sc-if>
+          <sc-if value="{{ P.sigText }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:1.35;color:var(--color-neutral-300)"><i class="ph ph-seal-check" style="color:oklch(0.76 0.15 150)"></i> {{ P.sigText }}</div></sc-if>
+        </div>
+
+        <sc-if value="{{ P.hasDiag }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;background:var(--color-accent-900);border:1px solid var(--color-accent-800)">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-accent-300)"><i class="ph ph-stethoscope" style="font-size:16px"></i><span style="flex:1">Diagnosis · {{ P.requested }}</span><span>{{ P.diagStatus }}</span></div>
+            <sc-if value="{{ P.diagFindings }}" hint-placeholder-val="{{ false }}"><div style="font-size:15px;line-height:1.4;color:var(--color-neutral-100);text-wrap:pretty">{{ P.diagFindings }}</div></sc-if>
+            <div style="font-size:12px;color:var(--color-neutral-400)">{{ P.diagMeta }}</div>
+          </div>
+        </sc-if>
+
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-neutral-400);padding:0 4px"><span style="flex:1">Verdicts</span><sc-if value="{{ P.disagree }}" hint-placeholder-val="{{ false }}"><span style="text-transform:none;letter-spacing:0;color:oklch(0.81 0.13 80)">▲ Reviewers disagree</span></sc-if></div>
+          <div style="border-radius:16px;background:var(--color-surface);overflow:hidden">
+            <div style="display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--color-neutral-800);font-size:15px"><span style="flex:1">Policy</span><span style="color:oklch(0.76 0.15 150)">✓ Passed</span></div>
+            <sc-for list="{{ P.gks }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:3px;padding:11px 14px;border-bottom:1px solid var(--color-neutral-800);background:{{ g.rowBg }}">
+                <div style="display:flex;gap:10px;font-size:15px"><span style="flex:1">{{ g.name }} <span style="font-size:12px;color:var(--color-neutral-500)">{{ g.model }}</span></span><span style="color:{{ g.v.fg }}">{{ g.v.text }}</span></div>
+                <div style="font-size:14px;line-height:1.35;color:var(--color-neutral-300);text-wrap:pretty">{{ g.summary }}</div>
+              </div>
+            </sc-for>
+            <div style="display:flex;gap:10px;padding:11px 14px;font-size:15px"><span style="flex:1;color:var(--color-neutral-300)">Final · strictest wins</span><span style="color:{{ P.final.fg }}">{{ P.final.text }}</span></div>
+          </div>
+        </div>
+
+        <sc-if value="{{ P.hasDiff }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;padding:2px;border-radius:9px;background:var(--color-neutral-900)">
+            <button onClick="{{ viewSteps }}" style="flex:1;min-height:32px;border:0;border-radius:7px;background:{{ segStepsBg }};color:var(--color-text);font:inherit;font-size:14px;font-weight:500;cursor:pointer">Steps</button>
+            <button onClick="{{ viewDiff }}" style="flex:1;min-height:32px;border:0;border-radius:7px;background:{{ segDiffBg }};color:var(--color-text);font:inherit;font-size:14px;font-weight:500;cursor:pointer">Diff vs. previous</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showSteps }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-neutral-400);padding:0 4px"><span style="flex:1">Steps · {{ P.nSteps }}</span><span style="text-transform:none;letter-spacing:0;color:var(--color-accent-300)">{{ P.progressText }}</span></div>
+            <sc-if value="{{ P.isRunning }}" hint-placeholder-val="{{ false }}"><div style="height:6px;border-radius:3px;background:var(--color-neutral-800);overflow:hidden;margin-bottom:6px"><div style="height:100%;width:{{ P.pct }};background:var(--color-accent);transition:width .3s"></div></div></sc-if>
+            <sc-for list="{{ P.steps }}" as="s" hint-placeholder-count="5">
+              <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;background:var(--color-surface);opacity:{{ s.opacity }}">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:13px;border:1.5px solid {{ s.ringColor }};color:{{ s.ringColor }}">{{ s.marker }}</span>
+                  <span style="flex:1;font-size:15px;font-weight:500;line-height:1.3">{{ s.purpose }}</span>
+                  <sc-if value="{{ s.edited }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--color-accent-300)">Edited</span></sc-if>
+                  <sc-if value="{{ s.hasStatus }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:{{ s.st.fg }}">{{ s.st.text }}</span></sc-if>
+                </div>
+                <sc-if value="{{ s.notEditing }}" hint-placeholder-val="{{ true }}"><div style="padding:9px 10px;border-radius:10px;background:var(--color-bg);font-family:ui-monospace,'SF Mono',monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-all;color:var(--color-neutral-100)">{{ s.command }}</div></sc-if>
+                <sc-if value="{{ s.editing }}" hint-placeholder-val="{{ false }}"><button onClick="{{ s.onEdit }}" aria-label="Edit step command" style="display:flex;gap:8px;align-items:flex-start;width:100%;min-height:44px;padding:9px 10px;border-radius:10px;background:var(--color-bg);border:1px solid {{ s.editBorder }};font-family:ui-monospace,'SF Mono',monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-all;color:var(--color-neutral-100);text-align:left;cursor:pointer"><span style="flex:1">{{ s.draft }}</span><i class="ph ph-pencil-simple" style="font-size:17px;color:var(--color-accent)"></i></button></sc-if>
+                <div style="font-size:12px;color:var(--color-neutral-500)">{{ s.kind }} · cwd <span style="font-family:ui-monospace,'SF Mono',monospace">{{ s.cwd }}</span> · {{ s.timeout }} s</div>
+                <sc-if value="{{ s.hasNote }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 10px;border-radius:10px;background:color-mix(in srgb,oklch(0.81 0.13 80) 12%,transparent);font-size:13px;line-height:1.4"><span style="color:oklch(0.81 0.13 80)">▲ {{ s.noteBy }}</span> {{ s.noteText }}</div></sc-if>
+                <sc-if value="{{ s.showTerm }}" hint-placeholder-val="{{ false }}">
+                  <div ref="{{ s.termRef }}" style="max-height:150px;overflow:auto;padding:8px 10px;border-radius:10px;background:var(--color-bg);border:1px solid var(--color-neutral-800);font-family:ui-monospace,'SF Mono',monospace;font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-all">
+                    <sc-for list="{{ s.lines }}" as="ln" hint-placeholder-count="2"><div style="color:{{ ln.color }}">{{ ln.text }}</div></sc-for>
+                  </div>
+                  <button onClick="{{ s.onOpenOut }}" style="align-self:flex-start;min-height:44px;display:flex;align-items:center;gap:6px;padding:0 2px;border:0;background:transparent;color:var(--color-accent);font:inherit;font-size:15px;cursor:pointer"><i class="ph ph-arrows-out" style="font-size:17px"></i>{{ s.outLabel }}</button>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showDiff }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="padding:10px 12px;border-radius:12px;background:color-mix(in srgb,oklch(0.70 0.18 25) 12%,transparent);display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:14px"><span style="color:oklch(0.70 0.18 25)">✕ Failed at step 3</span> · {{ D.prevId }} · {{ D.endedAt }}</span>
+              <span style="font-family:ui-monospace,'SF Mono',monospace;font-size:11.5px;line-height:1.5;white-space:pre-wrap;color:var(--color-neutral-200)">{{ D.errorText }}</span>
+            </div>
+            <sc-for list="{{ D.rows }}" as="r" hint-placeholder-count="6">
+              <div style="display:flex;gap:10px;padding:10px 12px;border-radius:12px;background:{{ r.bg }};border:1px solid {{ r.border }}">
+                <span style="width:16px;flex:none;font-family:ui-monospace,'SF Mono',monospace;font-size:15px;color:{{ r.signColor }}">{{ r.sign }}</span>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                  <span style="font-family:ui-monospace,'SF Mono',monospace;font-size:13px;white-space:pre-wrap;word-break:break-all;color:{{ r.cmdColor }}">{{ r.cmd }}</span>
+                  <span style="font-size:12px;color:var(--color-neutral-400)">{{ r.meta }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;padding:12px 16px 34px;display:flex;flex-direction:column;gap:8px;background:color-mix(in srgb,var(--color-surface) 92%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--color-neutral-800);z-index:3">
+        <sc-if value="{{ A.awaiting }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ A.hint }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;text-align:center;color:var(--color-neutral-400)">{{ A.hint }}</div></sc-if>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ openReject }}" disabled="{{ offline }}" style="flex:1;min-height:50px;border-radius:14px;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-text);font:inherit;font-size:17px;font-weight:600;cursor:pointer;opacity:{{ A.rejectOpacity }}">Reject</button>
+            <button onClick="{{ approve }}" disabled="{{ A.approveDisabled }}" style="flex:1.6;min-height:50px;border-radius:14px;border:1px solid var(--color-accent);background:transparent;color:var(--color-accent);font:inherit;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;opacity:{{ A.approveOpacity }}"><i class="ph ph-scan-smiley" style="font-size:20px"></i>Approve</button>
+          </div>
+          <button onClick="{{ startEdit }}" disabled="{{ offline }}" style="min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;color:var(--color-accent);font:inherit;font-size:16px;cursor:pointer;opacity:{{ A.rejectOpacity }}"><i class="ph ph-pencil-simple" style="font-size:18px"></i>Approve with edits</button>
+        </sc-if>
+        <sc-if value="{{ A.editing }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:13px;line-height:1.35;text-align:center;color:var(--color-neutral-400);text-wrap:pretty">{{ A.editHint }}</div>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ cancelEdit }}" style="flex:1;min-height:50px;border-radius:14px;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-text);font:inherit;font-size:17px;font-weight:600;cursor:pointer">Cancel</button>
+            <button onClick="{{ submitEdits }}" disabled="{{ offline }}" style="flex:1.6;min-height:50px;border-radius:14px;border:1px solid var(--color-accent);background:transparent;color:var(--color-accent);font:inherit;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><i class="ph ph-paper-plane-tilt" style="font-size:19px"></i>Submit edits</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ A.running }}" hint-placeholder-val="{{ false }}">
+          <button onPointerDown="{{ holdStart }}" onPointerUp="{{ holdEnd }}" onPointerLeave="{{ holdEnd }}" onContextMenu="{{ prevent }}" disabled="{{ offline }}" style="position:relative;overflow:hidden;min-height:52px;border-radius:14px;border:1px solid oklch(0.70 0.18 25);background:transparent;color:oklch(0.70 0.18 25);font:inherit;font-size:17px;font-weight:600;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none">
+            <span style="position:absolute;left:0;top:0;bottom:0;width:{{ holdPct }};background:color-mix(in srgb,oklch(0.70 0.18 25) 28%,transparent)"></span>
+            <span style="position:relative;display:inline-flex;align-items:center;gap:8px"><i class="ph-fill ph-stop-circle" style="font-size:20px"></i>{{ holdLabel }}</span>
+          </button>
+        </sc-if>
+        <sc-if value="{{ A.info }}" hint-placeholder-val="{{ false }}">
+          <div style="min-height:50px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;line-height:1.35;color:{{ A.infoColor }};text-wrap:pretty">{{ A.infoText }}</div>
+          <sc-if value="{{ A.canDiagnose }}" hint-placeholder-val="{{ false }}"><button onClick="{{ diagnose }}" disabled="{{ offline }}" style="min-height:50px;border-radius:14px;border:1px solid var(--color-accent);background:transparent;color:var(--color-accent);font:inherit;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><i class="ph ph-stethoscope" style="font-size:20px"></i>Diagnose &amp; propose fix</button></sc-if>
+          <sc-if value="{{ A.revisedBy }}" hint-placeholder-val="{{ false }}"><button onClick="{{ openRevision }}" style="min-height:50px;border-radius:14px;border:1px solid var(--color-accent);background:transparent;color:var(--color-accent);font:inherit;font-size:17px;font-weight:600;cursor:pointer">Review revision {{ A.revisedBy }}</button></sc-if>
+        </sc-if>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ outOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:var(--color-bg);display:flex;flex-direction:column">
+      <div style="padding:54px 8px 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--color-neutral-800)">
+        <button onClick="{{ closeOut }}" style="min-height:44px;min-width:64px;padding:0 8px;border:0;background:transparent;color:var(--color-accent);font:inherit;font-size:17px;font-weight:600;cursor:pointer;text-align:left">Done</button>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:15px;font-weight:600">Step {{ O.n }} · {{ O.kind }}</span><span style="font-family:ui-monospace,'SF Mono',monospace;font-size:12px;color:var(--color-neutral-400)">{{ O.planId }}</span></div>
+        <button onClick="{{ copyOut }}" aria-label="Copy output" style="min-height:44px;min-width:64px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-accent);font:inherit;cursor:pointer"><i class="ph ph-copy" style="font-size:22px"></i></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;border-bottom:1px solid var(--color-neutral-800)"><span style="color:{{ O.stColor }}">{{ O.stText }}</span><span style="margin-left:auto;font-family:ui-monospace,'SF Mono',monospace;font-size:12px;color:var(--color-neutral-400)">{{ O.size }}</span></div>
+      <sc-if value="{{ O.truncated }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;padding:9px 14px;background:color-mix(in srgb,oklch(0.81 0.13 80) 14%,transparent);font-size:13px;line-height:1.35"><i class="ph ph-scissors" style="font-size:16px;color:oklch(0.81 0.13 80)"></i><span><span style="color:oklch(0.81 0.13 80)">▲ Output truncated at 1 MB.</span> The rest wasn’t kept; the exit code still counts.</span></div></sc-if>
+      <div ref="{{ outRef }}" onScroll="{{ onOutScroll }}" style="flex:1;min-height:0;overflow:auto;padding:10px 12px 96px;font-family:ui-monospace,'SF Mono',monospace;font-size:12px;line-height:1.6">
+        <sc-for list="{{ O.lines }}" as="ln" hint-placeholder-count="8"><div style="white-space:pre-wrap;word-break:break-all"><sc-for list="{{ ln.segs }}" as="g" hint-placeholder-count="1"><span style="color:{{ g.color }};font-weight:{{ g.weight }};opacity:{{ g.op }}">{{ g.text }}</span></sc-for></div></sc-for>
+        <sc-if value="{{ O.waiting }}" hint-placeholder-val="{{ false }}"><div style="color:var(--color-neutral-500)">No output yet.</div></sc-if>
+        <sc-if value="{{ O.exitText }}" hint-placeholder-val="{{ false }}"><div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--color-neutral-800);color:{{ O.exitColor }}">{{ O.exitText }}</div></sc-if>
+      </div>
+      <sc-if value="{{ O.showJump }}" hint-placeholder-val="{{ false }}"><button onClick="{{ jumpLive }}" style="position:absolute;right:16px;bottom:40px;min-height:44px;display:flex;align-items:center;gap:6px;padding:0 16px;border-radius:22px;border:1px solid var(--color-accent);background:var(--color-surface);color:var(--color-accent);font:inherit;font-size:15px;font-weight:600;box-shadow:var(--shadow-md);cursor:pointer"><i class="ph ph-arrow-down"></i>Jump to live</button></sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ editorOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:var(--color-bg);display:flex;flex-direction:column">
+      <div style="padding:54px 8px 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--color-neutral-800)">
+        <button onClick="{{ cancelStepEdit }}" style="min-height:44px;min-width:72px;padding:0 8px;border:0;background:transparent;color:var(--color-accent);font:inherit;font-size:17px;cursor:pointer;text-align:left">Cancel</button>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:15px;font-weight:600">Edit step {{ E.n }}</span><span style="font-size:12px;color:var(--color-neutral-400)">{{ E.purpose }}</span></div>
+        <button onClick="{{ doneStepEdit }}" style="min-height:44px;min-width:72px;padding:0 8px;border:0;background:transparent;color:var(--color-accent);font:inherit;font-size:17px;font-weight:600;cursor:pointer;text-align:right">Done</button>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:12px 16px 34px">
+        <span style="font-size:12px;color:var(--color-neutral-400)">Original</span>
+        <div style="padding:8px 10px;border-radius:10px;background:var(--color-surface);font-family:ui-monospace,'SF Mono',monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-all;color:var(--color-neutral-400)">{{ E.original }}</div>
+        <span style="font-size:12px;color:var(--color-neutral-400);margin-top:6px">Your version</span>
+        <textarea value="{{ editText }}" onChange="{{ onEditText }}" spellCheck="false" autoCapitalize="off" autoCorrect="off" aria-label="Command" style="flex:1;min-height:160px;padding:12px;border-radius:12px;border:1px solid var(--color-accent-700);background:var(--color-surface);color:var(--color-text);font-family:ui-monospace,'SF Mono',monospace;font-size:14px;line-height:1.55;resize:none;outline:none"></textarea>
+        <sc-if value="{{ E.policyMsg }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:1.35;color:oklch(0.70 0.18 25)">✕ Policy would refuse this · {{ E.policyMsg }}</div></sc-if>
+        <div style="font-size:12px;line-height:1.4;color:var(--color-neutral-500)">cwd <span style="font-family:ui-monospace,'SF Mono',monospace">{{ E.cwd }}</span> · timeout {{ E.timeout }} s · policy and both gatekeepers re-check every edit</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ banner }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position:absolute;top:56px;left:10px;right:10px;z-index:8;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:20px;background:color-mix(in srgb,var(--color-neutral-800) 92%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:var(--shadow-md);font-size:15px"><i class="ph {{ bannerIcon }}" style="font-size:20px;color:{{ bannerColor }}"></i><span style="flex:1;line-height:1.3">{{ banner }}</span></div>
+  </sc-if>
+
+  <sc-if value="{{ sheetReject }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;z-index:6;background:color-mix(in srgb,var(--color-neutral-900) 60%,transparent);display:flex;flex-direction:column;justify-content:flex-end;padding:0 10px 34px;gap:8px">
+      <div onClick="{{ stop }}" style="border-radius:16px;background:var(--color-surface);overflow:hidden">
+        <div style="padding:14px 16px;text-align:center;font-size:13px;line-height:1.4;color:var(--color-neutral-400);border-bottom:1px solid var(--color-neutral-800)">Claude will be told this plan was rejected and can propose a new one.</div>
+        <button onClick="{{ doReject }}" style="width:100%;min-height:56px;border:0;background:transparent;color:oklch(0.70 0.18 25);font:inherit;font-size:19px;cursor:pointer">Reject plan</button>
+      </div>
+      <button onClick="{{ closeSheet }}" style="min-height:56px;border-radius:16px;border:0;background:var(--color-surface);color:var(--color-accent);font:inherit;font-size:19px;font-weight:600;cursor:pointer">Cancel</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ face }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:9;display:grid;place-items:center;background:color-mix(in srgb,var(--color-neutral-900) 45%,transparent)">
+      <div style="width:168px;height:168px;border-radius:32px;background:color-mix(in srgb,var(--color-neutral-800) 94%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+        <i class="ph {{ faceIcon }}" style="font-size:64px;color:{{ faceColor }}"></i>
+        <span style="font-size:15px;font-weight:500">{{ faceLabel }}</span>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;connection&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;online&quot;,&quot;unreachable&quot;],&quot;default&quot;:&quot;online&quot;,&quot;tsType&quot;:&quot;'online'|'unreachable'&quot;,&quot;section&quot;:&quot;States&quot;},&quot;dev2Agent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;current&quot;,&quot;behind&quot;,&quot;offline&quot;],&quot;default&quot;:&quot;current&quot;,&quot;tsType&quot;:&quot;'current'|'behind'|'offline'&quot;,&quot;section&quot;:&quot;States&quot;},&quot;showLoading&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;}}">
+class Component extends DCLogic {
+  state = { out: null, outFollow: true, editing: null, drafts: {}, editStep: null, editText: '', data: null, scene: 'app', tab: 'approvals', planId: null, from: 'approvals', view: 'steps', reviewed: {}, sheet: null, face: null, banner: null, bannerKind: 'ok', hold: 0, now: Date.now(), expanded: null, notifDone: {}, prefs: { refused: true,  approval: true, high: true, failed: true, schedule: true }, conn: null, retrying: false };
+  detailRef = React.createRef();
+  outRef = React.createRef();
+  termRef = React.createRef();
+  timers = [];
+
+  componentDidMount() {
+    window.__wPhone = this;
+    Promise.all([import(new URL('./warden-data.js', document.baseURI).href), import(new URL('./warden-agents.js', document.baseURI).href)]).then(([W, W2]) => {
+      this.W = W; this.W2 = W2;
+      this.later(900, () => {
+        const d = W.makeData(); const x = W2.makeAgentData();
+        d.agents = x.agents; d.groups = x.groups; d.policy = x.policy; d.lockdown = null;
+        d.plans.push(...x.plans);
+        d.feed = [...d.feed, ...x.feed].sort((a, b) => b.ts - a.ts);
+        this.setState({ data: d }, () => this.applyAgentProp());
+      });
+    });
+    this.tick = setInterval(() => this.onTick(), 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.tick); this.timers.forEach(clearTimeout); cancelAnimationFrame(this.raf);
+    (this.state.data?.plans || []).forEach(p => clearInterval(p._timer));
+  }
+  componentDidUpdate(prevProps) {
+    if (prevProps && prevProps.dev2Agent !== this.props.dev2Agent && this.state.data) this.applyAgentProp();
+    const el = this.termRef.current; if (el) el.scrollTop = el.scrollHeight;
+    const oe = this.outRef.current; if (oe && this.state.out && this.state.outFollow) oe.scrollTop = oe.scrollHeight;
+    this.checkScroll();
+  }
+  later(ms, fn) { const t = setTimeout(fn, ms); this.timers.push(t); }
+  bump() { this.setState({ data: this.state.data }); }
+  get offline() { return (this.props.connection ?? 'online') === 'unreachable'; }
+  plan(id = this.state.planId) { return this.state.data?.plans.find(p => p.id === id); }
+  agentOf(name) { return this.state.data?.agents.find(a => a.name === name); }
+  agentState(a) { if (!a || a.revoked) return 'revoked'; if (!a.online) return 'offline'; return a.policy < this.state.data.policy.version ? 'behind' : 'current'; }
+  canRun(name) { return !this.state.data.lockdown && this.agentState(this.agentOf(name)) === 'current'; }
+  agentWarn(name) {
+    const d = this.state.data; const a = this.agentOf(name); const st = this.agentState(a); const v = d.policy.version;
+    if (d.lockdown) return ['Lockdown active. You can approve; nothing runs until it’s lifted.', 'danger', 'Lockdown active'];
+    if (st === 'offline') return [`${name}’s agent is offline. You can approve; it runs when the agent is back on policy v${v}.`, 'danger', `${name} agent offline`];
+    if (st === 'behind') return [`${name}’s agent is on policy v${a.policy}, latest is v${v}. You can approve; it’s held until the agent is current.`, 'warn', `${name} ⏳ behind on policy (v${a.policy})`];
+    return null;
+  }
+  applyAgentProp() {
+    const d = this.state.data; if (!d) return; const a = this.agentOf('dev2'); if (!a) return;
+    const v = this.props.dev2Agent ?? 'current';
+    if (v === 'offline') a.online = false;
+    else { a.online = true; a.policy = v === 'behind' ? Math.min(a.policy, d.policy.version - 1) : d.policy.version; }
+    this.bump();
+  }
+  onTick() {
+    const d = this.state.data;
+    if (d) d.plans.forEach(p => {
+      if (p.status === 'approved' && p.held && this.canRun(p.target)) { p.held = false; this.showBanner(`${p.target} is current · ${p.id} released to run`); this.later(800, () => this.startRun(p)); }
+      const a = this.agentOf(p.target);
+      if (p.status === 'running' && a && !a.online) this.disconnect(p);
+    });
+    this.setState({ now: Date.now() });
+  }
+  disconnect(p) {
+    clearInterval(p._timer); const s = p.steps[p.cur];
+    s.status = 'failed'; s.lines.push('… connection to warden lost', `warden-agent (${p.target}): step killed after its timeout · rest aborted`);
+    p.steps.slice(p.cur + 1).forEach(x => x.status = 'skipped');
+    p.status = 'failed'; p.failedAt = s.n; p.failReason = 'agent_disconnected'; p.ended = Date.now();
+    this.log('agent', 'warden', p.target, `${p.target} disconnected mid-plan · ${p.id} failed`);
+    this.showBanner(`${p.target} disconnected · plan failed (agent_disconnected)`, 'bad'); this.bump();
+  }
+  diagnose(p) {
+    const d = this.state.data; p.diag = { status: 'running' };
+    this.log('proposal', 'iphone', p.target, `Diagnosis requested for ${p.id}`);
+    this.showBanner(`Sent to ${p.requested_by} · investigating with read-only commands`, 'neutral'); this.bump();
+    this.later(3800, () => {
+      const res = this.W2.diagnose(p, cmd => this.W2.roDeny(d.groups, p.target, cmd));
+      p.diag = { status: res.steps ? 'proposed' : 'no_fix', findings: res.findings, runs: res.runs.length, refused: res.runs.filter(r => r.refused).length };
+      res.runs.forEach(r => d.feed.unshift({ ts: Date.now(), type: r.refused ? 'policy' : 'read_only', client: p.requested_by, target: p.target, text: r.refused ? `read_only ${r.cmd} refused` : r.cmd, mono: !r.refused }));
+      if (res.steps) { const rev = this.W2.makeRevision(p, res.steps); d.plans.push(rev); p.diag.revisionId = rev.id; this.log('proposal', p.requested_by, p.target, `Revision ${rev.id} proposed for ${p.id}`); this.showBanner(`Revision proposed · ${rev.id}`); }
+      else this.showBanner('Diagnosis done · no revision proposed', 'neutral');
+      this.bump();
+    });
+  }
+  lockdown() {
+    const d = this.state.data; if (d.lockdown) return;
+    if (d.plans.some(p => p.status === 'running')) this.kill();
+    d.policy.version += 1; d.lockdown = { since: Date.now(), version: d.policy.version };
+    d.plans.filter(p => p.status === 'approved').forEach(p => p.held = true);
+    d.agents.filter(a => a.online && !a.revoked).forEach((a, i) => this.later(600 + i * 800, () => { a.policy = d.policy.version; this.bump(); }));
+    this.log('lockdown', 'iphone', 'all', `Lockdown from iPhone · every agent read-only (policy v${d.policy.version})`);
+    navigator.vibrate?.([40, 30, 80]);
+    this.showBanner('Lockdown active · every agent is read-only', 'bad'); this.bump();
+  }
+  pendingList() { return this.state.data.plans.filter(p => p.status === 'awaiting_approval').sort((a, b) => a.created - b.created); }
+  showBanner(msg, kind = 'ok') { clearTimeout(this.bT); this.setState({ banner: msg, bannerKind: kind }); this.bT = setTimeout(() => this.setState({ banner: null }), 3200); }
+  log(type, client, target, text) { this.state.data.feed.unshift({ ts: Date.now(), type, client, target, text }); }
+  openOut(p, n) { this.setState({ out: { planId: p.id, n }, outFollow: true }); }
+  startEdit(p) { const drafts = {}; p.steps.forEach(s => { drafts[s.n] = s.command; }); this.setState({ editing: p.id, drafts, editStep: null }); }
+  newHash() { return 'sha256:' + Array.from({ length: 64 }, () => '0123456789abcdef'[Math.random() * 16 | 0]).join(''); }
+  denyEdit(p, cmd) { const d = this.state.data; return this.W2.denies(d.policy.rules, cmd, null) || this.W2.groupDeny(d.groups, p.target, cmd); }
+  submitEdits(p) {
+    const dr = this.state.drafts; const changed = p.steps.filter(s => (dr[s.n] || '').trim() !== s.command);
+    if (!changed.length) { this.setState({ editing: null }); this.showBanner('No commands changed', 'neutral'); return; }
+    const bad = changed.map(s => [s, this.denyEdit(p, dr[s.n].trim())]).find(x => x[1]);
+    if (bad) { this.showBanner(`Policy refuses step ${bad[0].n} · fix it first`, 'bad'); return; }
+    changed.forEach(s => { s.command = dr[s.n].trim(); s.edited = true; });
+    p.status = 'reviewing'; p.hash = null;
+    this.log('proposal', 'iphone', p.target, `${p.id} edited on iPhone · ${changed.length} step${changed.length > 1 ? 's' : ''} changed · re-review`);
+    this.setState({ editing: null, editStep: null, reviewed: { ...this.state.reviewed, [p.id]: false } });
+    this.later(2800, () => {
+      if (p.status !== 'reviewing') return;
+      p.status = 'awaiting_approval'; p.hash = this.newHash(); p.rehashed = true;
+      this.log('verdict', 'warden', p.target, `${p.id} re-reviewed after your edits · new hash`);
+      this.showBanner(`Re-reviewed · new hash ${p.hash.slice(0, 11)}…${p.hash.slice(-4)}`); this.bump();
+    });
+  }
+  faceId(label, cb) {
+    this.setState({ face: { phase: 'scan', label } });
+    this.later(1000, () => this.setState({ face: { phase: 'ok', label: 'Face ID' } }));
+    this.later(1550, () => { this.setState({ face: null }); cb(); });
+  }
+  openPlan(id, from) {
+    this.setState({ scene: 'app', planId: id, from: from || this.state.tab, view: 'steps', sheet: null });
+    if (this.detailRef.current) this.detailRef.current.scrollTop = 0;
+  }
+  checkScroll() {
+    const el = this.detailRef.current; const p = this.plan();
+    if (!el || !p || p.risk !== 'high' || p.status !== 'awaiting_approval' || this.state.reviewed[p.id]) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) this.setState({ reviewed: { ...this.state.reviewed, [p.id]: true } });
+  }
+  approve(p, via = 'iPhone') {
+    this.faceId('Approve plan', () => {
+      p.status = 'approved'; p.approval = { at: Date.now() }; p.signed = true;
+      this.log('approval', 'iphone', p.target, `${p.id} approved and signed on iPhone`);
+      if (!this.canRun(p.target)) { p.held = true; this.showBanner(`Approved · held until ${p.target} can run it`, 'neutral'); return; }
+      this.showBanner(`Approved on iPhone ${this.W.fmtTime(Date.now())} · waiting for Claude to execute`);
+      this.later(1500, () => this.startRun(p));
+    });
+  }
+  startRun(p) {
+    if (p.status !== 'approved') return;
+    p.status = 'running'; p.started = Date.now();
+    p.steps.forEach(s => { s.status = 'pending'; s.lines = []; });
+    this.log('run', 'claude-code', p.target, `${p.id} execute_plan · ${p.steps.length} steps`);
+    this.runStep(p, 0);
+  }
+  runStep(p, i) {
+    if (p.status !== 'running') return;
+    if (i >= p.steps.length) { p.status = 'succeeded'; p.ended = Date.now(); this.log('run', 'warden', p.target, `${p.id} ✓ succeeded`); this.showBanner(`✓ Succeeded · ${p.goal}`); this.bump(); return; }
+    const s = p.steps[i]; s.status = 'running'; p.cur = i; let li = 0;
+    const dd = this.state.data; const why = this.W2.denies(dd.policy.rules, s.command, dd.lockdown);
+    if (why) {
+      s.status = 'failed'; s.lines = ['$ ' + s.command, `warden-agent (${p.target}): refused · policy_violation`, '  ' + why];
+      p.steps.slice(i + 1).forEach(x => x.status = 'skipped'); p.status = 'failed'; p.failedAt = s.n; p.failReason = 'policy_violation'; p.ended = Date.now();
+      this.log('policy', 'agent:' + p.target, p.target, `${p.id} step ${s.n} refused · policy_violation`); this.showBanner(`${p.target}’s agent refused step ${s.n}`, 'bad'); this.bump(); return;
+    }
+    s.lines = [`warden-agent (${p.target}): plan hash ✓ · your signature ✓ · policy v${dd.policy.version} ✓`, '$ ' + s.command]; this.bump();
+    p._timer = setInterval(() => {
+      if (p.status !== 'running') { clearInterval(p._timer); return; }
+      if (li < s.script.length) { s.lines.push(s.script[li++]); this.bump(); return; }
+      clearInterval(p._timer);
+      if (s.exit !== 0) {
+        s.status = 'failed'; s.lines.push(`exit ${s.exit}`);
+        p.steps.slice(i + 1).forEach(x => x.status = 'skipped');
+        p.status = 'failed'; p.failedAt = s.n; p.ended = Date.now();
+        this.log('run', 'warden', p.target, `${p.id} ✕ failed at step ${s.n}`);
+        this.showBanner(`✕ Failed at step ${s.n} · ${p.target}`, 'bad'); this.bump();
+      } else { s.status = 'succeeded'; this.runStep(p, i + 1); }
+    }, 520);
+  }
+  kill() {
+    this.state.data.plans.filter(p => p.status === 'running').forEach(p => {
+      clearInterval(p._timer);
+      const s = p.steps[p.cur]; s.status = 'cancelled'; s.lines.push('^C  SIGTERM sent · exited after 0.4 s');
+      p.steps.slice(p.cur + 1).forEach(x => x.status = 'skipped');
+      p.status = 'cancelled'; p.ended = Date.now();
+      this.log('kill', 'iphone', p.target, `Kill switch · ${p.id} stopped at step ${s.n}`);
+    });
+    navigator.vibrate?.([30, 40, 60]);
+    this.showBanner('Kill switch used · plan cancelled', 'bad');
+  }
+  holdStart(e, kind = 'kill') {
+    if (this.offline) return;
+    e.preventDefault(); navigator.vibrate?.(10);
+    const t0 = performance.now();
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / 2000);
+      this.setState({ hold: k, holdKind: kind });
+      if (k >= 1) { this.setState({ hold: 0 }); if (kind === 'kill') this.kill(); else this.faceId('Lock down', () => this.lockdown()); return; }
+      this.raf = requestAnimationFrame(step);
+    };
+    cancelAnimationFrame(this.raf); this.raf = requestAnimationFrame(step);
+  }
+  holdEnd() { cancelAnimationFrame(this.raf); if (this.state.hold) this.setState({ hold: 0 }); }
+
+  renderVals() {
+    const W = this.W; const s = this.state; const d = s.data; const offline = this.offline;
+    const loading = !d || (this.props.showLoading ?? false);
+    const b = W ? W.badge : () => ({});
+    const scenes = [['lock', 'Lock screen', 'ph-bell-ringing'], ['signin', 'Sign in', 'ph-fingerprint'], ['app', 'App', 'ph-device-mobile']];
+    const base = {
+      sceneBtns: scenes.map(([k, label, icon]) => ({ label, icon, border: s.scene === k ? 'var(--color-accent)' : 'var(--color-divider)', fg: s.scene === k ? 'var(--color-accent)' : 'var(--color-text)', onClick: () => this.setState({ scene: k, planId: null, expanded: null, face: null, sheet: null }) })),
+      isLock: s.scene === 'lock', isSignin: s.scene === 'signin', isApp: s.scene === 'app',
+      inTabs: s.scene === 'app' && !s.planId, inDetail: s.scene === 'app' && !!s.planId,
+      offline, loading, staleAt: W ? W.fmtTime(s.now - 60000) : '', retryLabel: s.retrying ? '…' : 'Retry',
+      retry: () => { this.setState({ retrying: true }); this.later(1200, () => { this.setState({ retrying: false }); if (this.offline) this.showBanner('Still can’t reach Warden', 'bad'); }); },
+      banner: s.banner, bannerIcon: { ok: 'ph-check-circle', bad: 'ph-x-circle', neutral: 'ph-info' }[s.bannerKind], bannerColor: W ? { ok: W.C.ok, bad: W.C.danger, neutral: W.C.neutral }[s.bannerKind] : '',
+      face: !!s.face, faceLabel: s.face?.label, faceIcon: s.face?.phase === 'ok' ? 'ph-check-circle' : 'ph-scan-smiley', faceColor: s.face?.phase === 'ok' ? (W ? W.C.ok : '') : 'var(--color-accent)',
+      signIn: () => this.faceId('Sign in to Warden', () => this.setState({ scene: 'app', tab: 'approvals' })),
+      signOut: () => this.setState({ scene: 'signin' }),
+      stop: e => e.stopPropagation(), prevent: e => e.preventDefault(),
+      holdStart: e => this.holdStart(e, 'kill'), holdEnd: () => this.holdEnd(), lockHoldStart: e => this.holdStart(e, 'lock'),
+      holdPct: (s.holdKind === 'kill' ? Math.round(s.hold * 100) : 0) + '%', holdLabel: s.holdKind === 'kill' && s.hold > 0 ? `Keep holding… ${(2 - s.hold * 2).toFixed(1)} s` : 'Hold 2 s to stop',
+      lockPct: (s.holdKind === 'lock' ? Math.round(s.hold * 100) : 0) + '%', lockLabel: s.holdKind === 'lock' && s.hold > 0 ? `Keep holding… ${(2 - s.hold * 2).toFixed(1)} s` : 'Hold 2 s to lock down',
+      lockdown: !!d?.lockdown, noLockdown: !d?.lockdown, lockSince: d?.lockdown && W ? W.fmtTime(d.lockdown.since) : '',
+      detailRef: this.detailRef, onDetailScroll: () => this.checkScroll(),
+      sheetReject: s.sheet === 'reject', closeSheet: () => this.setState({ sheet: null }),
+      lockTime: W ? W.fmtTime(s.now) : '', lockDate: new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Copenhagen', weekday: 'long', day: 'numeric', month: 'long' }).format(s.now),
+    };
+    const tabDefs = [['approvals', 'Approvals', 'ph-tray'], ['activity', 'Activity', 'ph-pulse'], ['schedules', 'Schedules', 'ph-clock-clockwise'], ['settings', 'Settings', 'ph-gear-six']];
+    const pendN = d ? this.pendingList().length : 0;
+    base.tabs = tabDefs.map(([k, label, icon]) => ({ label, iconClass: (s.tab === k ? 'ph-fill ' : 'ph ') + icon, color: s.tab === k ? 'var(--color-accent)' : 'var(--color-neutral-500)', badge: k === 'approvals' && pendN ? pendN : null, onClick: () => this.setState({ tab: k }) }));
+    base.tabTitle = tabDefs.find(t => t[0] === s.tab)[1];
+    base.tApprovals = !loading && s.tab === 'approvals'; base.tActivity = !loading && s.tab === 'activity';
+    base.tSchedules = !loading && s.tab === 'schedules'; base.tSettings = s.tab === 'settings';
+    if (s.tab === 'settings') base.loading = false;
+    base.prefsList = [];
+    base.notifPrefs = [['approval', 'Approval needed'], ['high', 'High-risk plan'], ['failed', 'Plan failed'], ['schedule', 'Scheduled run finished'], ['refused', 'Agent refused a step']].map(([k, label]) => {
+      const on = s.prefs[k];
+      return { label, trackBg: on ? 'var(--color-accent-600)' : 'var(--color-neutral-700)', knobSide: on ? 'flex-end' : 'flex-start', onToggle: () => this.setState({ prefs: { ...s.prefs, [k]: !on } }) };
+    });
+    base.connText = s.conn === 'testing' ? 'Testing…' : s.conn === 'ok' ? '✓ Connected · 38 ms' : s.conn === 'bad' ? '✕ No response' : '';
+    base.connColor = s.conn === 'bad' ? (W ? W.C.danger : '') : s.conn === 'ok' ? (W ? W.C.ok : '') : 'var(--color-neutral-400)';
+    base.testConn = () => { this.setState({ conn: 'testing' }); this.later(900, () => this.setState({ conn: this.offline ? 'bad' : 'ok' })); };
+
+    const empty = { agentRows: [], pending: [], decided: [], runningCards: [], feed: [], schedules: [], notifs: [], P: { steps: [], gks: [], status: {}, risk: {}, final: {} }, A: {}, D: { rows: [] } };
+    if (!d || !W) return { ...base, ...empty };
+
+    const pend = this.pendingList();
+    base.pending = pend.map(p => {
+      const left = p.expires - s.now;
+      return { goal: p.goal, target: p.target, nSteps: p.steps.length, requested: p.requested_by, risk: b(p.risk), verdict: b(p.final), expiresIn: W.fmtCountdown(left), expColor: left < 300000 ? W.C.warn : 'var(--color-neutral-400)', revises: p.revises, changed: p.changed, agentShort: this.agentWarn(p.target)?.[2] || null, warnColor: this.agentWarn(p.target)?.[1] === 'warn' ? W.C.warn : W.C.danger, onOpen: () => this.openPlan(p.id, 'approvals') };
+    });
+    base.noPending = pend.length === 0;
+    const dec = d.plans.filter(p => !pend.includes(p)).sort((x, y) => (y.ended || y.approval?.at || y.created) - (x.ended || x.approval?.at || x.created)).slice(0, 4);
+    const V = d.policy.version;
+    base.agentRows = d.agents.filter(a => !a.revoked).map(a => { const st = this.agentState(a); const c = st === 'current' ? W.C.ok : st === 'behind' ? W.C.warn : W.C.danger; return { name: a.name, icon: st === 'current' ? '●' : st === 'behind' ? '⏳' : '■', color: c, pv: st === 'offline' ? 'offline' : 'v' + a.policy, meta: st === 'offline' ? 'No heartbeat' : `Heartbeat ${Math.floor((s.now / 1000 + a.beatSeed) % 15)} s ago · agent ${a.version}` }; });
+    const cur = d.agents.filter(a => !a.revoked && this.agentState(a) === 'current').length; const tot = d.agents.filter(a => !a.revoked).length;
+    base.polText = `v${V} · ${cur} of ${tot} agents current`; base.polColor = cur === tot ? W.C.ok : W.C.warn;
+    base.hasDecided = dec.length > 0;
+    base.decided = dec.map(p => ({ goal: p.goal, status: b(p.status), when: W.fmtTime(p.ended || p.approval?.at || s.now), onOpen: () => this.openPlan(p.id, 'approvals') }));
+    base.runningCards = d.plans.filter(p => p.status === 'running').map(p => {
+      const st = p.steps[p.cur];
+      return { goal: p.goal, target: p.target, stepN: st.n, total: p.steps.length, purpose: st.purpose, onOut: () => this.openOut(p, st.n), pct: Math.round((p.cur / p.steps.length) * 100 + 100 / p.steps.length * Math.min(1, st.lines.length / (st.script.length + 1))) + '%', onOpen: () => this.openPlan(p.id, 'activity') };
+    });
+    const typeMeta = { proposal: ['Proposal', 'ph-file-text', 'var(--color-accent-300)'], verdict: ['Verdict', 'ph-scales', 'var(--color-neutral-200)'], approval: ['Approval', 'ph-check-circle', W.C.ok], rejection: ['Rejection', 'ph-x-circle', 'var(--color-neutral-300)'], read_only: ['Read-only', 'ph-eye', 'var(--color-neutral-300)'], run: ['Run', 'ph-play', 'var(--color-accent-300)'], schedule: ['Schedule', 'ph-clock-clockwise', 'var(--color-neutral-200)'], kill: ['Kill switch', 'ph-stop-circle', W.C.danger], policy: ['Policy', 'ph-shield-check', 'var(--color-accent-300)'], agent: ['Agent', 'ph-hard-drives', 'var(--color-neutral-200)'], lockdown: ['Lockdown', 'ph-lock-simple', W.C.danger] };
+    base.feed = d.feed.slice(0, 14).map(f => { const m = typeMeta[f.type] || typeMeta.verdict; return { text: f.text, label: m[0], icon: m[1], color: m[2], client: f.client, target: f.target, rel: W.fmtRel(f.ts, s.now), font: f.mono ? "ui-monospace,'SF Mono',monospace" : 'inherit' }; });
+    base.schedules = d.schedules.map(x => ({
+      name: x.name, plain: x.plain, target: x.target, nextText: x.paused ? '— paused' : x.next, res: b(x.last), aria: (x.paused ? 'Resume ' : 'Pause ') + x.name,
+      trackBg: x.paused ? 'var(--color-neutral-700)' : 'var(--color-accent-600)', knobSide: x.paused ? 'flex-start' : 'flex-end',
+      onToggle: () => {
+        if (x.paused && x.name === 'dev2-image-refresh') { this.showBanner('Template changed since approval · Claude must propose it again', 'neutral'); return; }
+        x.paused = !x.paused; this.showBanner(x.paused ? `${x.name} paused` : `${x.name} resumed`, 'neutral'); this.bump();
+      },
+    }));
+
+    {
+      const strip = t => t.replace(/\x1b\[[0-9;]*m/g, '');
+      const lineColor = t => t.startsWith('$ ') ? 'var(--color-accent-300)' : /ERR|Error|✘|^exit [1-9]|\^C|refused/.test(t) ? W.C.danger : /✓|✔|200 OK|0 vulnerabilities/.test(t) ? W.C.ok : 'var(--color-neutral-300)';
+      const PAL = ['var(--color-neutral-500)', W.C.danger, W.C.ok, W.C.warn, 'var(--color-accent-300)', 'var(--color-accent-200)', 'var(--color-accent-300)', 'var(--color-neutral-100)'];
+      const ansi = (t, fb) => {
+        const segs = []; let col = null, bold = false, dim = false, last = 0, m; const re = /\x1b\[([0-9;]*)m/g;
+        const push = x => { if (x) segs.push({ text: x, color: col || fb, weight: bold ? 600 : 400, op: dim ? 0.6 : 1 }); };
+        while ((m = re.exec(t))) { push(t.slice(last, m.index)); last = re.lastIndex; (m[1] || '0').split(';').map(Number).forEach(c => { if (c === 0) { col = null; bold = false; dim = false; } else if (c === 1) bold = true; else if (c === 2) dim = true; else if (c >= 30 && c <= 37) col = PAL[c - 30]; else if (c === 39) col = null; }); }
+        push(t.slice(last)); if (!segs.length) segs.push({ text: ' ', color: fb, weight: 400, op: 1 }); return segs;
+      };
+      const op = s.scene === 'app' && s.out ? d.plans.find(x => x.id === s.out.planId) : null; const os = op ? op.steps.find(x => x.n === s.out.n) : null;
+      base.outOpen = !!os; base.outRef = this.outRef;
+      base.closeOut = () => this.setState({ out: null });
+      base.jumpLive = () => this.setState({ outFollow: true });
+      base.onOutScroll = e => { const el = e.currentTarget; const atB = el.scrollTop + el.clientHeight >= el.scrollHeight - 16; if (atB !== this.state.outFollow) this.setState({ outFollow: atB }); };
+      if (os) {
+        const live = op.status === 'running' && op.steps[op.cur] === os; const plain = os.lines.map(strip);
+        const bytes = os.bytes || plain.join('\n').length;
+        base.copyOut = () => { navigator.clipboard?.writeText(plain.join('\n')).catch(() => {}); this.showBanner('Output copied', 'neutral'); };
+        base.O = {
+          n: os.n, kind: os.kind, planId: op.id, truncated: !!os.truncated, waiting: !os.lines.length,
+          stText: live ? (s.outFollow ? '● Live · following output' : '❚❚ Paused · you scrolled up') : ({ succeeded: '✓ Finished', failed: '✕ Failed', cancelled: '— Cancelled', pending: 'Waiting to start', skipped: '— Skipped' }[os.status] || os.status),
+          stColor: live ? 'var(--color-accent)' : b(os.status).fg,
+          size: os.truncated ? '1.0 MB · cap reached' : bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`,
+          lines: os.lines.map(t => ({ segs: ansi(t, lineColor(strip(t))) })),
+          exitText: live || ['pending', 'skipped'].includes(os.status) ? null : os.status === 'cancelled' ? 'Stopped by the kill switch · SIGTERM' : `Exit code ${os.status === 'failed' ? (os.exit || 1) : 0}${os.dur ? ' · ' + W.fmtDur(os.dur) : ''}`,
+          exitColor: os.status === 'succeeded' ? W.C.ok : W.C.danger,
+          showJump: live && !s.outFollow,
+        };
+      } else { base.O = { lines: [] }; base.copyOut = () => {}; }
+    }
+    const [p1, p2, p3] = d.plans;
+    const nd = s.notifDone;
+    const notif = (id, p, title, body, titleColor, actions, openOnly) => ({
+      title, body, titleColor, openOnly, when: id === 'n4' ? '03:02' : W.fmtRel(p ? p.created : s.now, s.now),
+      expanded: s.expanded === id,
+      onTap: () => this.setState({ expanded: s.expanded === id ? null : id }),
+      actions: actions.map(([label, icon, color, fn]) => ({ label, icon, color, onClick: fn })),
+    });
+    const open = id => () => this.faceId('Unlock', () => this.openPlan(id, 'approvals'));
+    const refused = d.plans.find(x => x.id === 'pln_01JB6T2Q');
+    base.notifs = [
+      ...(d.lockdown ? [notif('n0', { created: d.lockdown.since }, '■ Lockdown active', `Every agent is read-only · policy v${d.lockdown.version}`, W.C.danger, [['Open', 'ph-arrow-square-out', 'var(--color-text)', () => this.faceId('Unlock', () => this.setState({ scene: 'app', planId: null, tab: 'settings' }))]])] : []),
+      notif('n5', { created: refused.ended }, '▲ Agent refused a step · dev', `${refused.id} · rm resolved outside /srv/dev through a symlink`, W.C.warn, [
+        ...(d.lockdown ? [] : [['Lock down all agents', 'ph-lock-simple', W.C.danger, () => { if (offline) { this.showBanner('Can’t reach Warden. Is WireGuard connected?', 'bad'); return; } this.setState({ expanded: null }); this.faceId('Lock down', () => this.lockdown()); }]]),
+        ['Open', 'ph-arrow-square-out', 'var(--color-text)', open(refused.id)],
+      ]),
+      nd.n1 ? notif('n1', p1, nd.n1 === 'approved' ? '✓ Approved · dev' : 'Rejected · dev', nd.n1 === 'approved' ? 'Waiting for Claude to execute pln_01JB7Q3K' : 'Claude has been told', 'var(--color-neutral-100)', [['Open', 'ph-arrow-square-out', 'var(--color-text)', open(p1.id)]])
+        : notif('n1', p1, 'Approval needed · dev', `Deploy myapp and verify HTTP · ${p1.steps.length} steps · ● Low risk`, 'var(--color-neutral-100)', [
+          ['Approve', 'ph-scan-smiley', 'var(--color-accent)', () => { if (offline) { this.showBanner('Can’t reach Warden. Is WireGuard connected?', 'bad'); return; } this.approve(p1); this.setState({ notifDone: { ...this.state.notifDone, n1: 'approved' }, expanded: null }); }],
+          ['Reject', 'ph-x', W.C.danger, () => { p1.status = 'rejected'; this.log('rejection', 'iphone', 'dev', `${p1.id} rejected from notification`); this.setState({ notifDone: { ...this.state.notifDone, n1: 'rejected' }, expanded: null }); }],
+          ['Open', 'ph-arrow-square-out', 'var(--color-text)', open(p1.id)],
+        ]),
+      notif('n2', p3, '■ High-risk plan · dev', `${p3.goal} · ${p3.steps.length} steps`, W.C.danger, [['Open', 'ph-arrow-square-out', 'var(--color-text)', open(p3.id)]], true),
+      notif('n3', { created: d.previous.ended }, '✕ Failed at step 3 · dev', 'Deploy myapp on dev and verify HTTP health · npm ERR! code EUSAGE', 'var(--color-neutral-100)', [['Open revision', 'ph-arrow-square-out', 'var(--color-text)', open(p1.id)]]),
+      notif('n4', null, '✓ nightly-dev-rebuild', '1 min 48 s · succeeded on dev', 'var(--color-neutral-100)', [['Open', 'ph-arrow-square-out', 'var(--color-text)', () => this.faceId('Unlock', () => this.setState({ scene: 'app', planId: null, tab: 'schedules' }))]]),
+    ];
+
+    const p = this.plan();
+    if (!p) return { ...base, P: empty.P, A: {}, D: { rows: [] } };
+    const left = p.expires - s.now;
+    const verdicts = p.gatekeepers.map(g => g.verdict); const disagree = new Set(verdicts).size > 1;
+    const rs = p.status === 'running' ? p.steps[p.cur] : null;
+    base.backLabel = s.from === 'activity' ? 'Activity' : 'Approvals';
+    base.back = () => this.setState({ planId: null, tab: s.from });
+    base.P = {
+      id: p.id, goal: p.goal, target: p.target, requested: p.requested_by, createdAt: W.fmtTime(p.created), revises: p.revises, changed: p.changed,
+      status: b(p.held && p.status === 'approved' ? 'held' : p.status), risk: b(p.risk), final: b(p.final), disagree, ...(() => { const w = ['awaiting_approval', 'approved'].includes(p.status) ? this.agentWarn(p.target) : null; const c = w && w[1] === 'warn' ? W.C.warn : W.C.danger; return { agentWarn: w ? w[0] : null, warnColor: c, warnBg: 'color-mix(in srgb,' + c + ' 14%,transparent)' }; })(),
+      sigText: p.signed && p.approval ? `Signed with Face ID at ${W.fmtTime(p.approval.at)} · the agent checks your signature before every step` : null,
+      showExpiry: p.status === 'awaiting_approval', expiresIn: W.fmtCountdown(left), expColor: left < 300000 ? W.C.warn : 'var(--color-neutral-400)',
+      hasDiff: !!p.revises, nSteps: p.steps.length, isRunning: !!rs,
+      pct: rs ? Math.round((p.cur / p.steps.length) * 100 + 100 / p.steps.length * Math.min(1, rs.lines.length / (rs.script.length + 1))) + '%' : '0%',
+      progressText: rs ? `Step ${rs.n} of ${p.steps.length}` : '',
+      gks: p.gatekeepers.map(g => ({ ...g, v: b(g.verdict), rowBg: disagree && g.verdict !== 'allow' ? 'color-mix(in srgb,' + W.C.warn + ' 9%,transparent)' : 'transparent' })),
+      steps: p.steps.map(st => {
+        const active = st === rs; const sb = b(st.status);
+        return {
+          purpose: st.purpose, command: st.command, kind: st.kind, cwd: st.cwd, timeout: st.timeout_s,
+          hasNote: !!st.note, noteBy: st.note?.by, noteText: st.note?.text,
+          hasStatus: st.status !== 'pending', st: sb, opacity: st.status === 'skipped' ? 0.5 : 1,
+          marker: { succeeded: '✓', failed: '✕', skipped: '—', cancelled: '—' }[st.status] || st.n,
+          ringColor: st.status === 'pending' ? 'var(--color-neutral-600)' : sb.fg,
+          showTerm: st.lines.length > 0, termRef: active ? this.termRef : null,
+          lines: st.lines.map(t => ({ text: t, color: t.startsWith('$ ') ? 'var(--color-accent-300)' : /ERR|Error|✘|^exit [1-9]|\^C/.test(t) ? W.C.danger : /✓|✔|200 OK|0 vulnerabilities/.test(t) ? W.C.ok : 'var(--color-neutral-300)' })),
+        };
+      }),
+    };
+    base.showSteps = s.view === 'steps'; base.showDiff = s.view === 'diff';
+    base.segStepsBg = s.view === 'steps' ? 'var(--color-neutral-700)' : 'transparent';
+    base.segDiffBg = s.view === 'diff' ? 'var(--color-neutral-700)' : 'transparent';
+    base.viewSteps = () => this.setState({ view: 'steps' }); base.viewDiff = () => this.setState({ view: 'diff' });
+    if (p.revises) {
+      const pr = d.previous;
+      base.D = {
+        prevId: pr.id, endedAt: W.fmtTime(pr.ended), errorText: pr.error.join('\n'),
+        rows: pr.diff.map(([oi, ni, kind]) => {
+          const o = oi != null ? pr.steps[oi] : null; const n = ni != null ? p.steps[ni] : null;
+          if (kind === 'removed') return { sign: '−', signColor: W.C.danger, cmd: o.command, cmdColor: 'var(--color-neutral-400)', meta: `Removed · was step ${o.n}, ${b(o.result).label.toLowerCase()}`, bg: 'color-mix(in srgb,' + W.C.danger + ' 9%,transparent)', border: 'transparent' };
+          if (kind === 'added') return { sign: '+', signColor: W.C.ok, cmd: n.command, cmdColor: 'var(--color-neutral-100)', meta: `Added · step ${n.n}`, bg: 'color-mix(in srgb,' + W.C.ok + ' 10%,transparent)', border: 'color-mix(in srgb,' + W.C.ok + ' 35%,transparent)' };
+          const r = b(o.result);
+          return { sign: ' ', signColor: '', cmd: n.command, cmdColor: 'var(--color-neutral-100)', meta: `Step ${n.n} · unchanged · previous run ${r.text}`, bg: 'var(--color-surface)', border: o.result === 'failed' ? 'color-mix(in srgb,' + W.C.danger + ' 45%,transparent)' : 'transparent' };
+        }),
+      };
+    } else base.D = { rows: [] };
+
+    const needScroll = p.risk === 'high' && !s.reviewed[p.id];
+    const A = { awaiting: p.status === 'awaiting_approval', running: p.status === 'running' };
+    A.approveDisabled = offline || needScroll;
+    A.approveOpacity = A.approveDisabled ? 0.45 : 1; A.rejectOpacity = offline ? 0.45 : 1;
+    A.hint = offline ? 'Read-only while Warden is unreachable' : needScroll ? '■ High risk · scroll through every step to enable Approve' : '';
+    const info = {
+      approved: p.held ? [`⏸ Approved · held until ${d.lockdown ? 'lockdown is lifted' : `${p.target}’s agent is on v${d.policy.version}`}`, W.C.warn] : ['✓ Approved · waiting for Claude to call execute_plan', 'var(--color-accent-300)'],
+      invalidated: [`⊘ ${p.invalidReason || 'Invalidated by a newer policy'}`, W.C.warn],
+      succeeded: [`✓ Succeeded in ${p.ended ? W.fmtDur((p.ended - p.started) / 1000) : ''}`, W.C.ok],
+      failed: [p.failReason ? `✕ Failed at step ${p.failedAt} · ${p.failReason}` : `✕ Failed at step ${p.failedAt}. Claude must propose a revision.`, W.C.danger],
+      cancelled: ['— Cancelled by kill switch', 'var(--color-neutral-300)'],
+      rejected: ['Rejected · Claude has been told', 'var(--color-neutral-300)'],
+      expired: [`Expired at ${W.fmtTime(p.expires)} · ask Claude to propose again`, 'var(--color-neutral-300)'],
+      reviewing: ['◌ Re-reviewing your edits · policy, then gatekeepers', 'var(--color-accent-300)'],
+    }[p.status];
+    A.info = !!info; A.infoText = info?.[0]; A.infoColor = info?.[1];
+    const revisedBy = d.plans.find(x => x.revises === p.id)?.id || null;
+    A.canDiagnose = p.status === 'failed' && !p.diag && !revisedBy;
+    A.revisedBy = revisedBy;
+    base.diagnose = () => this.diagnose(p); base.openRevision = () => this.openPlan(revisedBy, s.from);
+    base.P.hasDiag = !!p.diag; base.P.diagFindings = p.diag?.findings || null;
+    base.P.diagStatus = { running: '◌ Investigating…', proposed: '✓ Revision proposed', no_fix: 'No revision' }[p.diag?.status] || '';
+    base.P.diagMeta = p.diag?.runs != null ? `${p.diag.runs} read-only command${p.diag.runs === 1 ? '' : 's'}${p.diag.refused ? ` · ${p.diag.refused} refused by policy` : ''} · all logged` : 'Claude gets the failed step and its output, then looks around read-only.';
+    const editing = s.editing === p.id;
+    A.awaiting = A.awaiting && !editing; A.editing = editing;
+    A.editHint = 'Tap a command to edit it. Policy and both gatekeepers re-check every edit.';
+    if (A.awaiting && !A.hint && p.rehashed && p.hash) A.hint = `Edited by you · new hash ${p.hash.slice(0, 11)}…${p.hash.slice(-4)}`;
+    base.P.steps = base.P.steps.map((x, i) => {
+      const st = p.steps[i]; const dr = s.drafts[st.n] ?? st.command; const changed = editing && dr.trim() !== st.command;
+      const live = p.status === 'running' && p.steps[p.cur] === st;
+      return { ...x, editing, notEditing: !editing, draft: dr, edited: !!st.edited || changed, editBorder: changed ? 'var(--color-accent)' : 'var(--color-neutral-700)',
+        onEdit: () => this.setState({ editStep: st.n, editText: dr }), onOpenOut: () => this.openOut(p, st.n), outLabel: live ? 'Open live output' : 'Full output' };
+    });
+    const es = editing && s.editStep != null ? p.steps.find(x => x.n === s.editStep) : null;
+    base.editorOpen = !!es; base.editText = s.editText;
+    base.E = es ? { n: es.n, purpose: es.purpose, original: es.command, cwd: es.cwd, timeout: es.timeout_s, policyMsg: s.editText.trim() !== es.command ? this.denyEdit(p, s.editText.trim()) : null } : {};
+    base.onEditText = e => this.setState({ editText: e.target.value });
+    base.cancelStepEdit = () => this.setState({ editStep: null });
+    base.doneStepEdit = () => this.setState({ drafts: { ...this.state.drafts, [s.editStep]: this.state.editText }, editStep: null });
+    base.startEdit = () => this.startEdit(p); base.cancelEdit = () => this.setState({ editing: null, editStep: null }); base.submitEdits = () => this.submitEdits(p);
+    base.A = A;
+    base.bottomInset = editing ? '150px' : A.awaiting ? (A.hint ? '168px' : '142px') : (A.canDiagnose || A.revisedBy) ? '160px' : '100px';
+    base.approve = () => this.approve(p);
+    base.openReject = () => this.setState({ sheet: 'reject' });
+    base.doReject = () => { p.status = 'rejected'; this.log('rejection', 'iphone', p.target, `${p.id} rejected on iPhone`); this.setState({ sheet: null }); this.showBanner('Plan rejected · Claude has been told', 'neutral'); };
+    return base;
+  }
+}
+</script>
+</body>
+</html>
