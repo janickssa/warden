@@ -95,7 +95,12 @@ class LocalResolver:
 
     def resolve(self, path: str, cwd: str) -> Resolved:
         lex = lexical_join(cwd, path)
-        host = self._to_host(lex)
+        # Resolve the raw path component by component, as the kernel does: `lnk/../x` goes through the
+        # symlink's target before `..`, which a lexical normalisation would get wrong.
+        raw = path if path.startswith("/") else cwd.rstrip("/") + "/" + path
+        host = self._to_host(raw)
+        if ".." in raw.split("/") and not os.path.lexists(host):
+            raise ResolveError(f"can't resolve {raw}: it contains '..' and doesn't exist")
         missing: list[str] = []
         probe = host
         while True:

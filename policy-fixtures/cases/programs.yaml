@@ -1,0 +1,26 @@
+- {id: not-allowed-rm, command: "rm -rf /srv/dev/myapp/.cache", expect: deny, code: program_not_allowed}
+- {id: not-allowed-wget, command: "wget http://localhost/", expect: deny, code: program_not_allowed}
+- {id: program-path, command: "/usr/bin/npm ci", expect: deny, code: program_path}
+- {id: program-relative-path, command: "./node_modules/.bin/x", expect: deny, code: program_path}
+- {id: kind-mismatch-git-shell, kind: shell, command: "git status", expect: deny, code: kind_mismatch}
+- {id: kind-mismatch-curl-shell, kind: shell, command: "curl -I http://localhost/", expect: deny, code: kind_mismatch}
+- {id: kind-mismatch-npm-docker, kind: docker, command: "npm ci", expect: deny, code: kind_mismatch}
+- {id: git-sub-not-allowed, kind: git, command: "git push origin main", expect: deny, code: subcommand_not_allowed}
+- {id: git-sub-config, kind: git, command: "git config core.hooksPath x", expect: deny, code: subcommand_not_allowed}
+- {id: git-no-sub, kind: git, command: "git", expect: deny, code: missing_subcommand}
+- {id: docker-run, kind: docker, command: "docker run alpine", expect: deny, code: subcommand_not_allowed}
+- {id: docker-exec, kind: docker, command: "docker exec dev-myapp-app-1 sh", expect: deny, code: subcommand_not_allowed}
+- {id: docker-rm, kind: docker, command: "docker rm -f dev-myapp-app-1", expect: deny, code: subcommand_not_allowed}
+- {id: npm-exec, command: "npm exec x", expect: deny, code: subcommand_not_allowed}
+- {id: npm-publish, command: "npm publish", expect: deny, code: subcommand_not_allowed}
+- {id: sudo, command: "sudo npm ci", expect: deny, code: baseline_program}
+- {id: bash, command: "bash -c id", expect: deny, code: baseline_program}
+- {id: sh, command: "sh script.sh", expect: deny, code: baseline_program}
+- {id: env-wrapper, command: "env npm ci", expect: deny, code: baseline_program}
+- {id: xargs, command: "xargs rm", expect: deny, code: baseline_program}
+- {id: python-c, command: "python3 -c print(1)", expect: deny, code: baseline_inline_code}
+- {id: node-e, command: "node -e x", expect: deny, code: baseline_inline_code}
+- {id: perl-e-cluster, command: "perl -ne x", expect: deny, code: baseline_inline_code}
+- {id: kill-agent, command: "pkill warden-agent", expect: deny, code: baseline_program}
+- {id: dd, command: "dd if=/dev/zero of=/srv/dev/x", expect: deny, code: baseline_program}
+- {id: find-exec, command: "find /srv/dev -exec rm {} +", expect: deny, code: baseline_program}

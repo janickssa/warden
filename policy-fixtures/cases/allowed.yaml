@@ -1,0 +1,26 @@
+# Real plans from the prototypes and README: these must be allowed.
+- {id: git-checkout-tag, kind: git, command: "git -C /srv/dev/myapp checkout v1.4.2", expect: allow}
+- {id: npm-lockfile, command: "npm install --package-lock-only", expect: allow}
+- {id: npm-ci, command: "npm ci", expect: allow}
+- {id: npm-build, command: "npm run build", expect: allow}
+- {id: npm-test, command: "npm test", expect: allow}
+- {id: compose-up-build, kind: docker, command: "docker compose -p dev-myapp up -d --build", expect: allow}
+- {id: compose-build-plain, kind: docker, command: "docker compose -p dev-myapp build --progress=plain --no-cache", expect: allow}
+- {id: compose-env-file, kind: docker, cwd: /srv/dev/warden-demo, command: "docker compose -p dev-warden-demo --env-file .env.dev2 up -d", expect: allow}
+- {id: compose-run-migrate, kind: docker, command: "docker compose -p dev-myapp run --rm app npm run migrate", expect: allow}
+- {id: health-check, kind: http_check, command: "curl -I http://localhost:8080/health", expect: allow}
+- {id: health-check-sS, kind: http_check, command: "curl -sS -I http://localhost:3000/", expect: allow}
+- {id: health-check-devlan, kind: http_check, command: "curl -sSf --max-time 5 http://myapp.dev.lan/health", expect: allow}
+- {id: health-check-head-method, kind: http_check, command: "curl -X HEAD -H 'Accept: application/json' http://127.0.0.1:8080/", expect: allow}
+- {id: git-clone, kind: git, cwd: /srv/dev, command: "git clone https://github.com/you/warden-demo /srv/dev/warden-demo", expect: allow}
+- {id: git-clone-depth, kind: git, cwd: /srv/dev, command: "git clone --depth 1 https://github.com/you/myapp myapp", expect: allow}
+- {id: git-pull-ff, kind: git, cwd: /srv/dev/warden-demo, command: "git -C /srv/dev/warden-demo pull --ff-only", expect: allow}
+- {id: git-fetch, kind: git, command: "git fetch origin", expect: allow}
+- {id: git-log, kind: git, command: "git log --oneline -n 5", expect: allow}
+- {id: docker-stop, kind: docker, command: "docker stop dev-postgres-1", expect: allow}
+- {id: docker-restart, kind: docker, command: "docker restart dev-legacy-web-1", expect: allow}
+- {id: docker-logs, kind: docker, command: "docker logs --tail 50 dev-myapp-app-1", expect: allow}
+- {id: docker-logs-placeholder, kind: docker, command: "docker logs {{step1.container_id}}", expect: allow}
+- {id: docker-ps, kind: docker, command: "docker ps -a", expect: allow}
+- {id: dotdot-inside-workspace, command: "npm --prefix ../warden-demo ci", expect: allow}
+- {id: danish-commit-message-value, kind: git, command: "git log --grep 'Tilf\u00f8j login'", expect: allow}

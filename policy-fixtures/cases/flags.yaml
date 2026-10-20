@@ -1,0 +1,40 @@
+- {id: curl-o, kind: http_check, command: "curl -o /srv/dev/x http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-output-eq, kind: http_check, command: "curl --output=/srv/dev/x http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-output-space, kind: http_check, command: "curl --output /srv/dev/x http://localhost/", expect: deny, code: flag_denied}
+- {id: curl-cluster-o, kind: http_check, command: "curl -sSo /srv/dev/x http://localhost/", expect: deny, code: flag_denied}
+- {id: curl-attached-o, kind: http_check, command: "curl -ox http://localhost/", expect: deny, code: flag_denied}
+- {id: curl-out-prefix, kind: http_check, command: "curl --out x http://localhost/", expect: deny, code: flag_denied}
+- {id: curl-remote-name, kind: http_check, command: "curl -O http://localhost/x", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-upload, kind: http_check, command: "curl -T /srv/dev/x http://localhost/", expect: deny, code: flag_denied}
+- {id: curl-upload-file-eq, kind: http_check, command: "curl --upload-file=/srv/dev/x http://localhost/", expect: deny, code: flag_denied}
+- {id: curl-config, kind: http_check, command: "curl -K /srv/dev/curlrc http://localhost/", expect: deny, code: flag_denied}
+- {id: curl-config-eq, kind: http_check, command: "curl --config=/srv/dev/curlrc http://localhost/", expect: deny, code: flag_denied}
+- {id: curl-dump-header, kind: http_check, command: "curl -D /srv/dev/h http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-cookie-jar, kind: http_check, command: "curl --cookie-jar /srv/dev/c http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-trace, kind: http_check, command: "curl --trace /srv/dev/t http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-location, kind: http_check, command: "curl -L http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-write-out, kind: http_check, command: "curl -w x http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-proxy, kind: http_check, command: "curl -x http://evil.example:8080 http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-resolve, kind: http_check, command: "curl --resolve localhost:80:10.0.0.9 http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-connect-to, kind: http_check, command: "curl --connect-to localhost:80:evil.example:80 http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-post-data, kind: http_check, command: "curl -d x http://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: curl-method-post, kind: http_check, command: "curl -X POST http://localhost/", expect: deny, code: curl_method_denied}
+- {id: curl-request-delete, kind: http_check, command: "curl --request=DELETE http://localhost/", expect: deny, code: curl_method_denied}
+- {id: curl-insecure, kind: http_check, command: "curl -k https://localhost/", expect: deny, code: curl_flag_not_allowed}
+- {id: git-upload-pack, kind: git, cwd: /srv/dev, command: "git clone --upload-pack=touch https://github.com/you/x x", expect: deny, code: git_option_denied}
+- {id: git-upload-pack-u, kind: git, cwd: /srv/dev, command: "git clone -u touch https://github.com/you/x x", expect: deny, code: git_option_denied}
+- {id: git-config-c, kind: git, command: "git -c core.sshCommand=touch fetch", expect: deny, code: git_option_denied}
+- {id: git-config-after-sub, kind: git, cwd: /srv/dev, command: "git clone -c core.hooksPath=/srv/dev/h https://github.com/you/x x", expect: deny, code: git_option_denied}
+- {id: git-config-long-eq, kind: git, cwd: /srv/dev, command: "git clone --config=core.fsmonitor=x https://github.com/you/x x", expect: deny, code: git_option_denied}
+- {id: git-template, kind: git, cwd: /srv/dev, command: "git clone --template=/srv/dev/t https://github.com/you/x x", expect: deny, code: git_option_denied}
+- {id: git-submodules, kind: git, cwd: /srv/dev, command: "git clone --recurse-submodules https://github.com/you/x x", expect: deny, code: git_option_denied}
+- {id: git-exec-path, kind: git, command: "git --exec-path=/srv/dev/x status", expect: deny, code: git_option_denied}
+- {id: git-git-dir, kind: git, command: "git --git-dir=/srv/dev/x/.git status", expect: deny, code: git_option_denied}
+- {id: git-upload-prefix, kind: git, command: "git fetch --upload-p=x origin", expect: deny, code: git_option_denied}
+- {id: npm-global, command: "npm install -g left-pad", expect: deny, code: npm_option_denied}
+- {id: npm-global-long, command: "npm install --global left-pad", expect: deny, code: npm_option_denied}
+- {id: npm-location, command: "npm install --location=global left-pad", expect: deny, code: npm_option_denied}
+- {id: npm-script-shell, command: "npm run build --script-shell=/srv/dev/x", expect: deny, code: npm_option_denied}
+- {id: docker-host, kind: docker, command: "docker -H tcp://10.0.0.1:2375 ps", expect: deny, code: docker_option_denied}
+- {id: docker-context, kind: docker, command: "docker --context prod ps", expect: deny, code: docker_option_denied}
+- {id: compose-host-opt, kind: docker, command: "docker compose -p dev-x --host tcp://x up", expect: deny, code: docker_option_denied}

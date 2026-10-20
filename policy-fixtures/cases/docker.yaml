@@ -1,0 +1,19 @@
+- {id: compose-no-project, kind: docker, command: "docker compose up -d", expect: deny, code: compose_project_required}
+- {id: compose-prod-project, kind: docker, command: "docker compose -p prod-db up -d", expect: deny, code: compose_project_denied}
+- {id: compose-project-eq, kind: docker, command: "docker compose --project-name=prod-db up -d", expect: deny, code: compose_project_denied}
+- {id: compose-down-volumes, kind: docker, command: "docker compose -p dev-legacy down -v", expect: deny, code: deny_pattern}
+- {id: compose-privileged-run, kind: docker, command: "docker compose -p dev-myapp run --privileged app npm test", expect: deny, code: baseline_docker_flag}
+- {id: compose-run-mount-root, kind: docker, command: "docker compose -p dev-myapp run -v /:/host app npm test", expect: deny, code: baseline_docker_mount}
+- {id: compose-run-mount-root-eq, kind: docker, command: "docker compose -p dev-myapp run --volume=/:/host app npm test", expect: deny, code: baseline_docker_mount}
+- {id: compose-run-mount-flag, kind: docker, command: "docker compose -p dev-myapp run --mount type=bind,source=/,target=/h app npm test", expect: deny, code: baseline_docker_mount}
+- {id: compose-run-mount-etc, kind: docker, command: "docker compose -p dev-myapp run -v /etc:/e app npm test", expect: deny, code: baseline_docker_mount}
+- {id: compose-run-sock, kind: docker, command: "docker compose -p dev-myapp run -v /var/run/docker.sock:/s app npm test", expect: deny, code: baseline_docker_mount}
+- {id: compose-run-net-host, kind: docker, command: "docker compose -p dev-myapp run --network=host app npm test", expect: deny, code: baseline_docker_flag}
+- {id: compose-run-pid-host, kind: docker, command: "docker compose -p dev-myapp run --pid=host app npm test", expect: deny, code: baseline_docker_flag}
+- {id: compose-run-cap-add, kind: docker, command: "docker compose -p dev-myapp run --cap-add SYS_ADMIN app npm test", expect: deny, code: baseline_docker_flag}
+- {id: compose-run-device, kind: docker, command: "docker compose -p dev-myapp run --device /dev/sda app npm test", expect: deny, code: baseline_docker_flag}
+- {id: docker-stop-prod, kind: docker, command: "docker stop prod-db-1", expect: deny, code: container_denied}
+- {id: docker-restart-proxy, kind: docker, command: "docker restart docker-socket-proxy", expect: deny, code: container_denied}
+- {id: docker-logs-prod, kind: docker, command: "docker logs --tail 5 prod-web-1", expect: deny, code: container_denied}
+- {id: docker-ps-filter-prod, kind: docker, command: "docker ps --filter name=prod-db", expect: deny, code: container_denied}
+- {id: docker-inspect-prod-eq, kind: docker, command: "docker inspect --type=container prod-db", expect: deny, code: container_denied}
