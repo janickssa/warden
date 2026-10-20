@@ -266,7 +266,7 @@ output streaming, heartbeats every 15 s, kill = SIGTERM, then SIGKILL after 10 s
 `agent_disconnected` handling, replay protection: the agent keeps a persistent log of executed
 plan IDs). The agent re-runs the shared fixture corpus in `go test`. Tests: tampered hash, unsigned or
 invalid approval, replayed plan, wrong target, baseline violations, symlink escapes with real `realpath`,
-output cap at 1 MB (truncated, step continues, exit code still counts), timeout and kill. Done-when demo
+output cap at 1 MB (truncated, step continues, exit code still counts), timeout and kill. Agents connect directly to the warden guest, not through NPM (D-20). Done-when demo
 on `dev` in `docs/m2-demo.md`.
 
 ## M3 Policy distribution — outline
@@ -274,7 +274,7 @@ on `dev` in `docs/m2-demo.md`.
 `policy_dist/`: compile per target (global + targets + groups + approver keys), classifier (field
 direction table; anything unknown → loosen; Hypothesis tests), bundle schema with
 `additionalProperties: false` on both sides, online-key signing, pending bundles for loosening,
-`warden-sign bundle` (file key or YubiKey, see D-05), signature upload, version monotonicity, atomic
+`warden-sign keygen|bundle|trust-offline` with passphrase-encrypted ed25519 key files (D-04; YubiKey later behind the signer interface), signature upload, version monotonicity, atomic
 swap + ack `{version, sha256}`, 60 s poll + push, rollout state, `held` for behind/offline agents, and
 `invalidated` re-checks on publish. Policy test suite gate before publish. Lockdown/lift. Tests: 5
 in-process Go agents (real binaries), timed tightening < 5 s; loosening without offline sig rejected by
