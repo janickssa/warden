@@ -9,7 +9,8 @@ from typing import Any
 from sqlalchemy import Engine, event
 from sqlmodel import SQLModel, create_engine
 
-import warden.audit  # noqa: F401  (registers the audit table)
+import warden.audit
+import warden.plans.store  # noqa: F401  (registers the plans table)
 
 _TRIGGERS = (
     "CREATE TRIGGER IF NOT EXISTS audit_no_update BEFORE UPDATE ON audit "
