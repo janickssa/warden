@@ -1,0 +1,46 @@
+# Warden global policy (README section 7 and 7B).
+# Agents never read this file: Warden compiles it into signed bundles.
+deny_paths: [/etc, /root, /home, /var/lib/docker, /srv/prod]
+
+commands:
+  allow:
+    git: { subcommands: [clone, pull, fetch, checkout, status, log] }
+    docker: { subcommands: [ps, logs, inspect, start, stop, restart, compose] }
+    curl: { flags_deny: [-o, --output, -T, --upload-file, -K, --config] }
+    npm: { subcommands: [ci, install, test, run] }
+  deny_patterns:
+    - 'rm\s+-rf\s+/'
+    - 'curl .*\|\s*(ba)?sh'
+    - 'chmod\s+777'
+    - 'docker\s+run\s+.*--privileged'
+    - 'docker\s+run\s+.*-v\s+/:'
+    - 'docker\s+compose\s+.*down\s+.*-v'
+
+docker:
+  allowed_projects: ["dev-*"]
+  denied_containers: ["prod-*", "docker-socket-proxy"]
+
+network:
+  git_hosts: [github.com]
+  http_check_hosts: [localhost, 127.0.0.1, "*.dev.lan"]
+
+limits:
+  step_timeout_s: 600
+  plan_max_steps: 25
+  output_cap_mb: 1
+
+groups:
+  high-security:
+    desc: Unprivileged LXC containers that hold secrets and auth
+    members: [sec-vault, sec-auth, sec-dns]
+    read_only:
+      mode: restricted
+      deny_paths: [/home, /root, /etc/ssl/private, /var/lib/vault]
+    commands:
+      deny_patterns: ['docker\s+exec', 'curl\s.*-X\s*(POST|PUT|DELETE)']
+    limits:
+      plan_max_steps: 10
+    approvals:
+      passkey: true
+    gatekeepers:
+      unanimous: true

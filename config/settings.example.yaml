@@ -1,0 +1,8 @@
+# Human-only settings (README 10.0 and 17.3). Claude can neither read nor change these.
+server:
+  public_url: https://warden.example.dk   # clients via NPM, no port
+approvals:
+  expiry_min: 30
+  passkey_medium: false
+  chat: true
+  chat_max_steps: 10
