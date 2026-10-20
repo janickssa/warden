@@ -120,7 +120,7 @@ docs/m1-demo.md                    # recorded CLI session for the Done-when chec
 # plans/hashing.py
 def plan_hash(plan: PlanTemplate) -> str: ...
 #   input = canonical JSON of {"v":1, "plan_id", "target", "goal", "revises", "steps":[...]}
-#   (binds target and id; see DECISIONS D-07). Steps keep placeholders unexpanded.
+#   (binds target, id and goal; see DECISIONS D-07). Steps keep placeholders unexpanded.
 
 # plans/state.py
 TRANSITIONS: Mapping[PlanStatus, frozenset[PlanStatus]]   # exactly README §4
@@ -152,15 +152,16 @@ checker rejects any MCP path that tries to call them. Tests also check this at r
 
 ### Policy engine details (central side)
 
-1. **Input hygiene (before shlex):** NFC-normalise, then refuse if the command contains: control chars
-   (incl. NUL, `\r`, `\n`, tabs other than space), bidi overrides/isolates (U+202A–202E, U+2066–2069),
-   zero-width characters (U+200B–200D, U+2060, U+FEFF), or any non-ASCII character in the binary,
-   subcommand or flag tokens. Non-ASCII is also refused in path arguments in M1 (fail closed; can be
-   relaxed later with a decision). Confusables such as Cyrillic `с` in `сurl` and fullwidth `；` are
-   therefore refused with reason `non_ascii_token`.
-2. **Chaining/metacharacters:** refuse unquoted *and* quoted `; & | \` $ ( ) < > { }` except in the exact
-   placeholder form `{{stepN.name}}` / `{{secret:NAME}}` occupying a whole argv element. (Argv never
-   reaches a shell, but refusing outright removes a whole class of "it's just a literal" arguments.)
+1. **Input hygiene (before shlex, D-09):** NFC-normalise once at intake (the stored, shown and hashed
+   text is the normalised one). Refuse anywhere, quoted or not: `;` `|` `&` `` ` `` `$` `>` `<`, plus
+   newline/CR/NUL/other control and format characters, zero-width characters and bidi controls. `{{` / `}}`
+   are only allowed as an exact whole-element placeholder (`{{stepN.name}}`, `{{secret:NAME}}`).
+2. **Unicode by argv position (after shlex, D-09):** ASCII-only for the program name, subcommands, flag
+   names (before `=`), `cwd` and path-like arguments (`non_ascii_token`, e.g. Cyrillic `с` in `сurl`).
+   Other values (`git commit -m "Tilføj login"`, `--message=Rettet fejl i søgning`) may also contain
+   Latin-script letters (Latin-1 Supplement + Latin Extended-A); other scripts, look-alike punctuation
+   such as fullwidth `；` and leftover combining marks are refused (`disallowed_char`, naming the argv
+   position and code point).
 3. **shlex(posix=True)** → argv; parse errors (unbalanced quotes) → deny.
 4. **Structural match** per binary from `commands.allow`: subcommand allowlist (skipping global options
    like `git -C <dir>`, `docker compose -p <name>`), flag deny list matching `--flag`, `--flag=value`,
@@ -210,7 +211,8 @@ different user and can't reach them. See DECISIONS D-10.
 ### Tests (M1 Done-when and the brief's minimums)
 
 - **Hashing:** stable across key order and formatting; any change to target, id, goal or any step field
-  changes the hash; unexpanded placeholders are hashed; non-NFC input is refused; Hypothesis round-trip.
+  changes the hash; unexpanded placeholders are hashed; text is NFC-normalised at intake and the hasher
+  refuses non-NFC input; Hypothesis round-trip; shared test vectors for the Go agent.
 - **State machine:** every legal transition in §4 succeeds; every other (from, to) pair raises
   (generated exhaustively); terminal states are final.
 - **Lifecycle:** propose → policy deny → rejected (final, can't be approved); propose → awaiting → approve
@@ -226,7 +228,9 @@ different user and can't reach them. See DECISIONS D-10.
   `/srv/dev/../prod`, encoded variants), symlinks out of the workspace, symlink loops, `--output=x`,
   `-o x`, `-sSo x`, `--upload-file`, `-K`, `--config=`, `-c` / `--upload-pack` on git, Cyrillic and
   Greek look-alikes, fullwidth punctuation, zero-width and bidi characters, `;`, `&&`, `||`, `|`, `` ` ``,
-  `$()`, `${IFS}`, newline injection, redirects, unbalanced quotes, `--` tricks, denied containers via
+  `$()`, `${IFS}`, newline injection, redirects, unbalanced quotes, Danish values that must **pass**
+  (`-m "Tilføj login"`, `--message=Åbn ærlig øl`, decomposed `å` normalised), and æ/ø/å in a path or flag
+  that must be refused, `--` tricks, denied containers via
   `name=` filters, and docker `--privileged` / `-v /:/host`.
 - **Groups never widen:** a Hypothesis property test (for random global policies and random groups,
   effective ⊆ global), plus explicit cases for each row of the §7B table.
