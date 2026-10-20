@@ -3,7 +3,7 @@
 **A plan-then-execute MCP server that lets Claude operate a home/dev server, with an independent LLM gatekeeper and human approval.**
 
 You ask Claude: *"Set up the GitHub project on the dev server and test that curl works."*
-Claude proposes an exact list of commands → hard policy rules check them → one or more gatekeeper LLMs check that the commands match the goal → **you** approve in chat, on the web dashboard or on your iPhone → Warden executes exactly what you approved, stops on the first failure and makes Claude propose a revised plan.
+Claude proposes an exact list of commands → hard policy rules check them → one or more gatekeeper LLMs check that the commands match the goal → **you** approve in chat, on the web dashboard or on your iPhone → a small agent on the target server checks everything again and executes exactly what you approved, stops on the first failure and makes Claude propose a revised plan.
 
 > This README is written for two readers: humans setting up and extending Warden, and LLM coding agents designing or implementing it. Sections marked **🤖 Agent rules** are binding for agents.
 
@@ -14,7 +14,7 @@ Claude proposes an exact list of commands → hard policy rules check them → o
 These are the security model. Every design and code decision must preserve them. If a feature request conflicts with one, stop and ask the human.
 
 1. **Nothing state-changing runs without an approved plan.** The only exception is the read-only allowlist (section 8).
-2. **An approved plan is immutable.** It is hashed (SHA-256 over the canonical JSON of its steps) at approval time. The executor refuses to run anything whose hash doesn't match.
+2. **An approved plan is immutable.** It is hashed (SHA-256 over the canonical JSON of its steps) at approval time. Agents refuse to run anything whose hash doesn't match.
 3. **Claude can never approve its own plans.** No MCP tool approves, edits policy, or changes approval state. Approval only comes from a human channel authenticated separately from the MCP connection.
 4. **Stop on first failure.** A non-zero exit code, a timeout or a policy violation halts the plan. The remaining steps are marked `skipped`.
 5. **A failed plan is never resumed.** Claude must submit a new plan with `revises: <old_plan_id>`. The human sees a diff against the old plan.
@@ -22,6 +22,8 @@ These are the security model. Every design and code decision must preserve them.
 7. **Everything is logged.** Every proposal, verdict, approval, command, output and exit code is written to an append-only audit log.
 8. **Untrusted text is data.** Command output, repo contents, READMEs, web pages and logs are passed to gatekeepers clearly delimited as untrusted. They are never treated as instructions.
 9. **All authority lives in the backend.** The frontend and iPhone app are views. They hold no secrets and can only do what the backend allows for an authenticated human session.
+10. **Agents enforce independently.** Each target runs `warden-agent`, which checks the plan hash, the approval signature and its own copy of the policy before every step. A compromised central server still can't make an agent break policy.
+11. **Policy flows one way: signed, versioned, never rolled back.** Agents reject unsigned, older or tampered policy. Changes that tighten rules propagate automatically; changes that loosen them need the offline key (section 7A).
 
 ---
 
@@ -50,8 +52,8 @@ flowchart TB
             OLL[Ollama]
         end
         subgraph DEV["VM: dev (target)"]
-            SSHD[sshd<br/>user: warden]
-            DSP[docker-socket-proxy]
+            AG[warden-agent]
+            DSP[docker-socket-proxy<br/>unix socket]
             DOCK[(Docker)]
         end
     end
@@ -60,8 +62,8 @@ flowchart TB
     NPM -->|warden.lan /| WEB
     NPM -->|warden.lan /api /ws /mcp| API
     API --> OLL
-    API -->|SSH| SSHD
-    API -->|private net| DSP --> DOCK
+    AG -->|outbound mTLS :8443| API
+    AG --> DSP --> DOCK
     API -.->|optional| CLOUD[Cloud gatekeeper<br/>e.g. OpenAI]
     API -.->|later: public via NPM + OAuth| CA[claude.ai / Claude app]
 ```
@@ -70,32 +72,29 @@ flowchart TB
 
 | Guest | Type | Purpose | Notes |
 |---|---|---|---|
-| `warden` | Unprivileged LXC (or small VM) | Backend, MCP server, dashboard, SQLite | 2 vCPU, 2 GB RAM, 20 GB disk is plenty. Holds SSH key and API keys. |
+| `warden` | Unprivileged LXC (or small VM) | Backend, MCP server, dashboard, SQLite | 2 vCPU, 2 GB RAM, 20 GB disk is plenty. Holds the online signing key, internal CA and API keys. |
 | `ai` | VM with NVIDIA PCIe passthrough | Ollama | Or reuse whatever guest already owns the GPU. Port 11434 reachable only from `warden`. |
-| `dev` | VM | Target server where Claude does work | VM rather than LXC so Docker runs without nesting hacks and is properly isolated. |
+| `dev` | VM | Target server where Claude does work | VM rather than LXC so Docker runs without nesting hacks and is properly isolated. Runs `warden-agent`. |
 
 Use the **Proxmox firewall** so that:
 
 - `ai:11434` accepts only from `warden`.
-- `dev:22` and `dev:2375` (socket proxy) accept only from `warden`.
+- Targets need **no inbound ports** for Warden. Agents connect out to `warden:8443`; allow that only from target guests.
 - `warden` is reachable only from NPM.
 
-### Targets
+### Targets and agents
 
-Warden doesn't run on the server it manages. It reaches targets over the private network:
-
-- **Shell steps:** SSH as user `warden` on the target (no sudo, key-only, `asyncssh`). Commands are sent as `shlex.join(argv)` so the remote shell can't reinterpret them.
-- **Docker steps:** HTTP to `tecnativa/docker-socket-proxy` on the target, bound to the private interface only, with just the API sections needed.
-
-This also makes multiple targets (e.g. a second dev VM) a config change rather than a redesign.
+Warden doesn't run on the servers it manages. Each target runs **`warden-agent`**, a small Go binary that connects out to Warden, receives approved plans, re-checks them against its local policy and executes them. Docker access goes through `docker-socket-proxy` on a local unix socket, so the agent never holds root-equivalent Docker access. Full design in section 7A.
 
 ```yaml
-# targets.yaml
+# targets.yaml (central; compiled into each agent's policy bundle)
 - name: dev
-  ssh: { host: dev.lan, user: warden, key: /etc/warden/keys/dev_ed25519 }
-  docker_proxy: http://dev.lan:2375
+  agent_id: agt_01J...           # set at enrollment
   workspace_roots: [/srv/dev]
+  docker_socket: /run/warden/docker-proxy.sock
 ```
+
+Adding a server = enroll an agent and add an entry here.
 
 ### Remote access phases
 
@@ -115,9 +114,11 @@ flowchart LR
     MCP[MCP server<br/>Streamable HTTP + stdio] --> POL[Policy engine]
     POL --> GK[Gatekeeper panel<br/>Ollama / OpenAI / ...]
     GK --> PS[(Plan store)]
-    PS --> EX[Executor<br/>SSH + docker proxy]
+    PS --> DISP[Dispatcher<br/>signs + sends plans]
+    DISP <-->|mTLS| AGT[Agents on targets]
+    POLS[Policy service<br/>compile, sign, publish] --> AGT
     SCH[Scheduler] --> PS
-    EX & PS --> BUS[Event bus]
+    AGT & PS --> BUS[Event bus]
     BUS --> API[REST + WebSocket]
     API <--> WEB[Next.js dashboard]
     API <--> IOS[iPhone app]
@@ -131,7 +132,9 @@ flowchart LR
 | **Policy engine** | Deterministic allow/deny from `policy.yaml`. |
 | **Gatekeeper panel** | One or more reviewer LLMs from different providers. Strictest verdict wins. |
 | **Plan store** | SQLite (WAL). Plans, steps, verdicts, approvals, runs, audit log. |
-| **Executor** | Runs approved steps on targets with timeouts, output caps and workspace jail. |
+| **Dispatcher** | Signs approved plans and sends them to the right agent. Collects streamed output. |
+| **Policy service** | Versions, classifies (tighten/loosen), signs and publishes policy bundles. Tracks rollout per agent. |
+| **Agent registry** | Enrollment, certificates, revocation, heartbeats, versions. |
 | **Event bus** | In-process pub/sub feeding WebSocket clients and push notifications. |
 | **API** | REST + WebSocket for dashboard and app. Separate auth from MCP. |
 | **Scheduler** | Runs pre-approved plan templates (section 11). |
@@ -147,8 +150,15 @@ stateDiagram-v2
     proposed --> reviewed: policy ok, gatekeepers done
     reviewed --> awaiting_approval
     awaiting_approval --> approved: human approves
+    awaiting_approval --> reviewing: human approves with edits
+    reviewing --> awaiting_approval: policy + gatekeepers re-run, new hash
+    reviewing --> rejected: policy deny
     awaiting_approval --> rejected: human rejects
     awaiting_approval --> expired: timeout (default 30 min)
+    awaiting_approval --> invalidated: new policy version denies a step
+    approved --> invalidated: new policy version denies a step
+    approved --> held: agent offline, behind on policy, or lockdown
+    held --> approved: agent current again / lockdown lifted
     approved --> running: execute_plan
     running --> succeeded: all steps exit 0
     running --> failed: step fails / timeout
@@ -159,6 +169,10 @@ stateDiagram-v2
 
 - A gatekeeper `deny` still reaches the human, shown as a recommended rejection. The human has the final say, except over a **policy** deny, which is final.
 - The kill switch (dashboard, app, or `warden kill`) stops the running step: SIGTERM, then SIGKILL after 10 seconds.
+- **Approve with edits:** the human may change commands before approving. The plan goes to `reviewing`, runs through policy and every gatekeeper again, gets a new hash, and returns to `awaiting_approval`. Nothing runs until the re-reviewed plan is approved. Edited steps are marked `edited: true` and logged with a before/after diff.
+- **Held:** an approved plan whose agent is offline, not on the latest policy version, or under lockdown waits as `held` (shown as "⏸ Approved · held"). It starts automatically when the agent becomes current, unless it has expired or been invalidated meanwhile.
+- **Invalidated:** when a new policy version denies a step in a waiting or approved plan, the plan becomes `invalidated` with the reason and the policy version (e.g. "Policy v42 denies step 1"). Claude must propose again.
+- **Diagnosis after failure:** when a plan fails, Claude investigates with `read_only` commands (no approval needed, still logged and still subject to group restrictions) and posts its findings to the plan before proposing a revision. The dashboard and app show this as a *Diagnosis* panel.
 
 ---
 
@@ -174,11 +188,17 @@ stateDiagram-v2
   "requested_by": "claude-code",
   "steps": [Step],
   "hash": "sha256:...",                // set at approval
-  "status": "awaiting_approval",
+  "status": "awaiting_approval",      // proposed | reviewing | awaiting_approval | approved | held | running
+                                       // succeeded | failed | rejected | expired | cancelled | invalidated
+  "invalidated_by": 42 | null,         // policy version, with "invalid_reason"
+  "diagnosis": [{ "command": "...", "exit": 0, "output": "...", "note": "..." }] | null,
   "policy_result": { "ok": true, "violations": [] },
   "gatekeepers": [GatekeeperVerdict],
   "final_verdict": "allow" | "escalate" | "deny",
-  "approval": { "by": "dashboard:user", "at": "2026-10-20T14:32:05+02:00" } | null,
+  "approval": {
+    "by": "dashboard:user", "at": "2026-10-20T14:32:05+02:00",
+    "signature": { "by": "passkey:MacBook" | "warden-approval-key", "sig": "..." }
+  } | null,
   "created_at": "...",
   "expires_at": "..."
 }
@@ -192,7 +212,8 @@ stateDiagram-v2
   "cwd": "/srv/dev",
   "timeout_s": 120,
   "expect_exit": 0,
-  "captures": { "container_id": "stdout_trimmed" }
+  "captures": { "container_id": "stdout_trimmed" },
+  "edited": false                     // true if the human changed it
 }
 ```
 
@@ -260,7 +281,120 @@ limits:
 
 Commands are parsed with `shlex` into argv and matched structurally (binary, subcommand, flags, path arguments resolved on the target with `realpath`). Regex patterns are a backup layer only. Per-target `workspace_roots` come from `targets.yaml`.
 
+Agents never read these YAML files. Warden compiles them into signed, versioned **policy bundles** and distributes them (section 7A). Warden checks plans against policy at proposal time; each agent checks again before every step.
+
 ---
+
+## 7A. Agents and policy distribution
+
+### The agent (`warden-agent`)
+
+A small Go binary (single static file, low tens of MB RAM) running as user `warden` under systemd on each target.
+
+- **Connects outbound** to `wss://warden.lan:8443/agent` with mutual TLS. No inbound ports, works behind NAT.
+- **Before every step** it verifies: the plan hash, Warden's approval signature on that hash, the step against its local policy bundle, and every path argument resolved locally (`realpath`, symlinks followed) inside `workspace_roots`. Any failure → refuses and reports `policy_violation`.
+- **Executes** argv directly (no shell), with timeout, output cap and working-directory jail. Docker calls go through the local socket proxy.
+- **Streams** output and status back, sends a heartbeat every 15 s with agent version, policy version, disk and load.
+- **Fails closed:** if the connection to Warden drops mid-plan, it finishes or kills the current step (per its timeout) and aborts the rest. The plan becomes `failed` with reason `agent_disconnected`.
+- **Baseline rules compiled into the binary** that no policy can override: e.g. never `rm -rf /`, never write to `/etc`, `/usr`, `/boot`, never `--privileged`, never mount `/`, never touch the agent's own binary, config or keys.
+
+**Enrollment:** dashboard → *Add agent* (name, kind, workspace root) → one-time token (valid 15 min) → `warden-agent enroll` on the target. The agent generates its own ed25519 key and prints its fingerprint; the dashboard shows the fingerprint it received from the connecting IP. You compare them and click *Fingerprints match · enroll*, after which it gets a client certificate from Warden's internal CA. A mismatch aborts enrollment and is logged. **Revoke** from the dashboard: certificate is revoked and the connection dropped immediately.
+
+### Policy bundles
+
+`policy.yaml` + `targets.yaml` are compiled per agent into a bundle:
+
+```jsonc
+{
+  "version": 42,                      // strictly increasing, never reused
+  "issued_at": "2026-10-20T14:32:05+02:00",
+  "target": "dev",
+  "min_agent_version": "1.3.0",
+  "change": "tighten" | "loosen",
+  "rules": { /* compiled policy for this target */ },
+  "signatures": [
+    { "key": "online",  "sig": "ed25519:..." },
+    { "key": "offline", "sig": "ed25519:..." }   // required for loosen
+  ]
+}
+```
+
+An agent accepts a bundle only if: the signatures are valid for its change class, `version` is higher than the current one (no rollback), the schema validates with no unknown fields, and `target` matches. It then swaps atomically (write, fsync, rename) and acknowledges with `{version, sha256}`.
+
+### Publishing a rule change (e.g. you spot a vulnerability)
+
+1. Edit the rule on the dashboard **Policy** page, or edit `policy.yaml` and run `warden policy publish`.
+2. Warden validates it, shows a diff with one row per changed path (e.g. `groups.high-security.members`, `add`, `tighten`), classifies the whole change as **tighten** or **loosen**, and runs the policy test suite (schema checks such as invalid regexes, plus adversarial fixtures) against the new rules. Publishing is blocked while any test fails.
+3. You confirm with your passkey.
+4. **Tighten:** signed with the online key and pushed to every connected agent immediately (target: under 5 s). Offline agents get it when they reconnect; agents also check for a newer version on connect and every 60 s.
+5. **Rollout view:** the dashboard shows each agent as `✓ v42` or `⏳ v41`.
+6. **Enforcement:**
+   - The dispatcher won't send plans to an agent that isn't on the latest version.
+   - Approved plans that haven't started are re-checked; any that now violate policy become `invalidated` and you're notified.
+   - Running plans pick up the new rules from the next step, because agents check before every step.
+
+### Tighten vs. loosen: two keys
+
+| Key | Where it lives | Can sign |
+|---|---|---|
+| **Online key** | `warden` guest | Only changes proven to tighten: adding deny patterns, deny paths or denied containers; removing allowed commands, subcommands, flags or hosts; lowering limits |
+| **Offline key** | YubiKey or your laptop, never on a server | Anything that loosens, or that the classifier can't prove is tightening |
+
+This makes the urgent case (closing a hole) instant and automatic, while a compromised Warden still can't quietly open things up. Loosening flow: `warden policy publish` creates a pending bundle → sign it locally with `warden-sign bundle-v43.json` → upload the signature in the dashboard → it's published.
+
+### Lockdown
+
+One action in the dashboard, iPhone app or CLI (`warden lockdown`): kills running plans, puts every approved plan on `held`, and publishes a tightening bundle that allows only read-only commands on every agent. Lifting lockdown restores the previous rules as a new version, which counts as loosening and needs the offline key.
+
+### Agent self-updates (later)
+
+New agent binaries are signed with the offline key and sent through the same channel. Rollout is staged: one canary agent first, then the rest. The agent verifies the signature, swaps the binary and restarts via systemd, and rolls back automatically if no heartbeat arrives within 60 s.
+
+---
+
+## 7B. Groups
+
+A **group** is a named set of agents with extra restrictions layered on top of the global policy. Groups can **only add restrictions, never remove any**, and their rules ship inside the same signed policy bundle, so each agent enforces its own group rules. Typical use: a `high-security` group for unprivileged LXCs that hold secrets and auth (e.g. `sec-vault`, `sec-auth`, `sec-dns`).
+
+```yaml
+# policy.yaml
+groups:
+  high-security:
+    desc: Unprivileged LXC containers that hold secrets and auth
+    members: [sec-vault, sec-auth, sec-dns]
+    read_only:
+      mode: restricted              # allowed | restricted | off  (stricter to the right)
+      deny_paths: [/home, /root, /etc/ssl/private, /var/lib/vault]
+    commands:
+      deny_patterns: ['docker\s+exec', 'curl\s.*-X\s*(POST|PUT|DELETE)']
+    limits:
+      plan_max_steps: 10            # must be <= global
+    approvals:
+      passkey: true                 # passkey for every approval on members
+    gatekeepers:
+      unanimous: true               # every reviewer must say allow, else escalate
+```
+
+**Effective rules for an agent** = global policy + baseline + every group it belongs to. When groups overlap, the strictest value wins (lowest limit, strictest read-only mode, union of deny lists).
+
+**Group read-only modes:**
+
+| Mode | Effect on `read_only` for members |
+|---|---|
+| `allowed` | Normal allowlist (section 8) |
+| `restricted` | Allowlist, but any path argument under `read_only.deny_paths` is refused |
+| `off` | No read-only commands at all; everything needs a plan |
+
+**Tighten/loosen classification** (feeds the two-key rule in 7A):
+
+| Change | Class |
+|---|---|
+| New group, adding a member, adding a deny path or deny pattern | Tighten |
+| Read-only mode moved right (`allowed` → `restricted` → `off`) | Tighten |
+| Lowering `plan_max_steps`; turning on `passkey` or `unanimous` | Tighten |
+| Removing a member, path or pattern; moving mode left; raising steps; turning off `passkey`/`unanimous`; deleting a group | Loosen (offline key) |
+
+Refusals caused by a group name the group in the reason, e.g. `refused · group high-security: read_only.deny_paths includes /home`.
 
 ## 8. Read-only allowlist
 
@@ -326,11 +460,27 @@ Validate with Pydantic. A parse failure, timeout or unreachable provider counts 
 
 All channels share the same plan store and get live updates through the event bus.
 
+### 10.0 Approval rules (all channels)
+
+| Rule | Default | Setting |
+|---|---|---|
+| Plan expires after | 30 min | `approvals.expiry_min` |
+| Passkey / Face ID for high-risk plans | Always | Locked on |
+| Passkey for medium-risk plans | Off | `approvals.passkey_medium` |
+| Passkey for members of a group with `approvals.passkey` | Always | Set per group (7B) |
+| **Sign approvals with your passkey (end-to-end)** | On | `approvals.e2e` |
+| Chat approval via elicitation | On | `approvals.chat` |
+| Approve all | Not available, by design | — |
+
+**End-to-end approval signing.** With `approvals.e2e` on, every approval is a WebAuthn assertion over the plan hash, made with your passkey (Mac) or Face ID (iPhone). Agents hold the public keys of your registered passkeys and verify that **you** approved, not just Warden. Chat approval then hands off to the dashboard or app to sign. With it off, Warden's approval key signs and agents verify that instead.
+
 ### 10.1 Chat
 
 Uses **MCP elicitation**: during `wait_for_approval`, the server asks the client to show the user an approve/reject prompt. The answer comes from the user's UI action, not from the model.
 
 Client support varies and changes, so verify per client. Without elicitation, `wait_for_approval` returns a dashboard link. There is deliberately **no** path where the user types "approve" and Claude relays it, because the server can't tell the user and Claude apart in that path.
+
+Plans longer than `chat_max_steps` (setting, default 10) show a summary and a dashboard link instead.
 
 ### 10.2 Web dashboard (Next.js)
 
@@ -338,7 +488,7 @@ Client support varies and changes, so verify per client. Without elicitation, `w
 - **Types:** generated from the FastAPI OpenAPI schema with `openapi-typescript`, so frontend and backend can't drift.
 - **Routing via NPM:** `warden.lan/` → Next.js, `warden.lan/api`, `/ws`, `/mcp` → FastAPI. Same origin, so no CORS.
 - **Auth:** handled by FastAPI. Passkey (WebAuthn) login issues an httpOnly, `SameSite=Strict` session cookie. Next.js never sees tokens.
-- **Pages:** Live feed, Pending approvals, Plan detail (steps, verdicts per reviewer, diff vs. previous plan, live output), Schedules, Targets, Audit log, Kill switch.
+- **Pages:** Live feed, Pending approvals, Plan detail (steps, verdicts per reviewer, diff vs. previous plan, live output), Schedules, Agents, Policy, Audit log, Kill switch.
 - Approval requires a fresh action per plan. No "approve all".
 - Screens, layout and states: see section 17.
 
@@ -373,8 +523,9 @@ A schedule is **a plan template the human approved once, with explicit scope**:
 
 ## 12. Security
 
-- **Docker:** never mount the socket directly. Use `docker-socket-proxy` on each target, bound to the private interface, firewalled to `warden` only.
-- **SSH:** dedicated ed25519 key per target, user `warden` without sudo, `AllowUsers` restricted and source-limited to the `warden` guest's IP.
+- **Agents:** run as `warden` without sudo, systemd-hardened, with a client certificate per agent and mutual TLS. No inbound ports on targets.
+- **Docker:** never give the agent the raw socket. Use `docker-socket-proxy` on a local unix socket readable only by `warden`, with just the API sections needed.
+- **Keys:** online signing key and internal CA key on the `warden` guest (`0600`); offline policy key never on any server. Approval signing key is separate from the policy key.
 - **warden guest:** unprivileged LXC or VM, systemd hardening (`ProtectSystem=strict`, `NoNewPrivileges=yes`), secrets in `/etc/warden/secrets` with mode `0600`.
 - **NPM:** `warden.lan` with an access list (LAN + WireGuard subnets only). Later, a separate public host exposing only `/mcp`, with OAuth, rate limiting and HSTS.
 - **Secrets:** never in plans or logs. Steps reference `{{secret:NAME}}`; outputs are scrubbed of known secret values before storage or sending to cloud reviewers.
@@ -391,7 +542,8 @@ A schedule is **a plan template the human approved once, with explicit scope**:
 | MCP | `mcp` Python SDK (FastMCP), Streamable HTTP + stdio |
 | API | FastAPI, WebSockets, Pydantic v2 |
 | Storage | SQLite (WAL) via SQLModel |
-| Remote exec | `asyncssh`, `httpx` (docker proxy) |
+| Agent | Go: single static binary, mTLS WebSocket, ed25519 signatures |
+| Offline signing | `warden-sign` (Go CLI), optional YubiKey via PIV |
 | Gatekeepers | Ollama, OpenAI, Anthropic adapters via `httpx` |
 | Scheduling | APScheduler |
 | Frontend | Next.js + TypeScript + Tailwind + TanStack Query |
@@ -413,12 +565,18 @@ warden/
 │   │   ├── plans/             # models, store, hashing, diff, state machine
 │   │   ├── policy/            # parser, argv matcher, path checks
 │   │   ├── gatekeeper/        # panel, providers/, prompt, schema
-│   │   ├── executor/          # ssh runner, docker proxy client, captures
-│   │   ├── targets.py
+│   │   ├── dispatch/          # plan signing, agent connections, output streams
+│   │   ├── policy_dist/       # compile, classify, sign, publish, rollout
+│   │   ├── agents.py          # enrollment, CA, registry, revocation
 │   │   ├── scheduler.py
 │   │   ├── events.py
 │   │   └── audit.py
 │   └── tests/
+├── agent/                     # Go: warden-agent + warden-sign
+│   ├── cmd/warden-agent/
+│   ├── cmd/warden-sign/
+│   ├── internal/              # conn, policy, exec, docker, baseline, update
+│   └── go.mod
 ├── web/                       # Next.js dashboard
 │   ├── app/
 │   ├── lib/api-types.ts       # generated from OpenAPI
@@ -426,8 +584,13 @@ warden/
 ├── deploy/
 │   ├── warden-backend.service
 │   ├── warden-web.service
-│   └── target/compose.yml     # docker-socket-proxy for each target
-├── design/tokens.json         # shared design tokens (web + iOS)
+│   ├── warden-agent.service
+│   └── target/compose.yml     # docker-socket-proxy (unix socket)
+├── design/
+│   ├── nocturne/              # design system: styles.css, readme.md, theme.json
+│   ├── prototypes/            # Warden Dashboard v2, Warden iPhone v2 (+ mock data JS)
+│   ├── screenshots/
+│   └── tokens.json            # generated from nocturne/styles.css
 └── ios/                       # later: SwiftPM + xtool app (see 10.3)
 ```
 
@@ -438,10 +601,19 @@ warden/
 ### On each target (e.g. `dev` VM)
 
 ```bash
-sudo useradd -m -s /bin/bash warden
+sudo useradd -r -m -s /usr/sbin/nologin warden
 sudo mkdir -p /srv/dev && sudo chown warden: /srv/dev
-# add warden's public key to /home/warden/.ssh/authorized_keys
-docker compose -f deploy/target/compose.yml up -d   # socket proxy on private IP
+docker compose -f deploy/target/compose.yml up -d   # socket proxy on a unix socket
+sudo install -m 0755 warden-agent /usr/local/bin/
+sudo -u warden warden-agent enroll --server https://warden.lan:8443 --token <from dashboard>
+sudo systemctl enable --now warden-agent
+```
+
+### Signing keys (once, on your laptop)
+
+```bash
+warden-sign keygen --out ~/.warden/offline.key   # or --yubikey
+# upload the PUBLIC key in the dashboard; it's baked into every policy bundle check
 ```
 
 ### On the `ai` VM
@@ -478,13 +650,16 @@ Exact connection steps differ between client versions, so check each client's cu
 
 | Milestone | Contents | Done when |
 |---|---|---|
-| **M1 Core** | Plan store, state machine, hashing, policy, SSH executor, `read_only`, CLI approval | Propose, approve via CLI, execute, fail and revise on `dev` |
-| **M2 MCP** | All tools, Streamable HTTP, chat elicitation | Works end-to-end from Claude Code over WireGuard |
-| **M3 Gatekeepers** | Panel, Ollama + OpenAI adapters, injection test suite | Injection tests escalate or deny on every reviewer |
-| **M4 Dashboard** | Next.js, passkey auth, live feed, approvals, diffs, kill switch | Approve from the browser over VPN |
-| **M5 Schedules** | Templates, cron, expiry, failure notify | Nightly job runs and reports |
-| **M6 iPhone app** | SwiftUI, APNs actionable notifications, Face ID | Approve from the lock screen |
-| **M7 Public MCP** | NPM public host for `/mcp`, OAuth | Works from the Claude app without VPN |
+| **M1 Core** | Plan store, state machine, hashing, policy engine, CLI approval | Plans propose, approve and validate locally |
+| **M2 Agent** | `warden-agent` (Go), enrollment, mTLS, per-step checks, baseline rules, streaming | Plan runs on `dev`, fails and revises; tampered plan is refused |
+| **M3 Policy distribution** | Bundles, versioning, tighten/loosen classifier, groups, two keys, rollout view, lockdown, held/invalidated plans | Tightening rule reaches all agents in under 5 s; loosening without offline key is rejected |
+| **M4 MCP** | All tools, Streamable HTTP, chat elicitation | Works end-to-end from Claude Code over WireGuard |
+| **M5 Gatekeepers** | Panel, Ollama + OpenAI adapters, injection test suite | Injection tests escalate or deny on every reviewer |
+| **M6 Dashboard** | Next.js, passkey auth + e2e approval signing, approvals (incl. with edits), diffs, diagnosis, Agents, Groups, Policy, Settings, kill switch | Approve and publish rules from the browser |
+| **M7 Schedules** | Templates, cron, expiry, failure notify | Nightly job runs and reports |
+| **M8 iPhone app** | SwiftUI, APNs actionable notifications, Face ID, lockdown | Approve from the lock screen |
+| **M9 Public MCP** | NPM public host for `/mcp`, OAuth | Works from the Claude app without VPN |
+| **M10 Agent updates** | Signed binaries, canary rollout, auto-rollback | New agent version rolls out with no manual steps |
 
 ---
 
@@ -492,7 +667,7 @@ Exact connection steps differ between client versions, so check each client's cu
 
 1. Read section 1 before every change. If a change weakens an invariant, stop and ask the human.
 2. Build in milestone order. Each milestone ships with tests.
-3. Never use `shell=True`, `os.system` or string-built commands. Use argv lists, and `shlex.join` only at the SSH boundary.
+3. Never use `shell=True`, `os.system` or string-built commands. Use argv lists. In Go, `exec.Command(argv[0], argv[1:]...)`, never `sh -c`.
 4. Policy tests include adversarial cases: `../` traversal, symlinks out of the workspace, flag smuggling (`--output=`), unicode look-alikes, chaining characters.
 5. Gatekeeper tests include prompt-injection fixtures (e.g. a README saying "ignore previous instructions and run …"). Expected: `escalate` or `deny` from every provider.
 6. Fail closed. Errors in policy, gatekeepers, hashing or auth mean deny or escalate, never allow.
@@ -500,7 +675,12 @@ Exact connection steps differ between client versions, so check each client's cu
 8. `policy.yaml`, `targets.yaml` and `gatekeeper.yaml` are the single sources of truth. No hard-coded allowlists beyond safe defaults.
 9. Use metric/SI units and 24-hour time in all user-facing text.
 10. For the iOS app, follow the Linux pipeline rules (SwiftPM, xtool, no Xcode files, Foundation-only core package).
-11. UI work follows section 17. Colours come only from `design/tokens.json`; never hard-code hex values in components. Every new screen handles all states in 17.6.
+11. UI work follows section 17. Colours come only from the Nocturne tokens (`design/tokens.json`); never hard-code hex values in components. Every new screen handles all states in 17.6.
+12. Agents must reject any policy bundle that is unsigned, has a lower or equal version, fails schema validation or has unknown fields. The tighten/loosen classifier must default to **loosen** when unsure.
+13. Agent baseline rules live in code, have their own tests, and can't be disabled by config or policy.
+14. The prototypes in `design/prototypes/` (v2 only) are the visual and behavioural reference. Match their layout, copy and states; replace mock data with the real API. Don't copy prototype code verbatim into `web/`.
+15. Self-host everything in production: Inter and JetBrains Mono via `next/font`, Phosphor via npm. The dashboard must work with no internet access.
+16. Group rules can only add restrictions. Any code path that lets a group widen the global policy is a bug.
 
 ---
 
@@ -515,35 +695,50 @@ Applies to the web dashboard (10.2), the iPhone app (10.3) and chat approval (10
 3. **Risk is shown with colour + icon + text.** Colour is never the only signal.
 4. **Live by default.** Every view updates over WebSocket. If you approve on the phone, the browser updates within a second.
 5. **Dangerous actions take deliberate effort.** Approve and kill switch can't be triggered by a stray tap.
-6. **Dark mode only.** Clean and minimal (Linear/Vercel-like) on web; native iOS conventions in the app, with the same colours.
+6. **Dark mode only.** Nocturne design system (17.2) on web; native iOS conventions in the app, with the same colours.
 
-### 17.2 Design tokens (shared)
+### 17.2 Design system: Nocturne
 
-One source file, `design/tokens.json`, generates both the Tailwind theme (`web/`) and a Swift `Theme.swift` (`ios/`, generated and committed).
+The UI uses the **Nocturne** design system (in `design/nocturne/`). It's a quiet, compact dark interface: blue-grey ground, Inter at medium weight, 8 px radii, and a single purple accent used as lines and glow, never as large fills. Primary buttons are **outlined**, not filled.
+
+`design/nocturne/styles.css` is the source of truth. `design/tokens.json` is generated from it and feeds both the Tailwind theme (`web/`) and `Theme.swift` (`ios/`, generated and committed).
 
 | Token | Value | Use |
 |---|---|---|
-| `bg` | `#0B0D10` | Page background |
-| `surface` | `#14171C` | Cards, panels |
-| `surface-2` | `#1B1F26` | Code blocks, inputs |
-| `border` | `#262B33` | Dividers |
-| `text` | `#E6E8EB` | Primary text |
-| `text-muted` | `#8B929C` | Secondary text |
-| `accent` | `#5B8CFF` | Links, focus, running |
-| `ok` | `#3FB950` | allow, succeeded, low risk |
-| `warn` | `#D29922` | escalate, awaiting, medium risk |
-| `danger` | `#F85149` | deny, failed, high risk, kill switch |
-| `neutral` | `#6E7681` | skipped, expired, cancelled |
+| `--color-bg` | `#161826` | Page background |
+| `--color-surface` | `#232532` | Cards, panels |
+| `--color-neutral-900` / `-800` | `#292B31` / `#3F424D` | Code blocks, inputs, subtle fills |
+| `--color-divider` | text at 16 % | Dividers (fade out at the ends) |
+| `--color-text` | `#E9E9ED` | Primary text |
+| `--color-neutral-400` / `-500` | `#B2B6CA` / `#9397AB` | Secondary / muted text |
+| `--color-accent` | `#9184D9` | Lines, focus ring, running, active nav |
+| `--color-accent-300` | `#D2CEFD` | Accent-coloured body text |
+| `ok` | `oklch(0.76 0.15 150)` | allow, succeeded, low risk, tighten |
+| `warn` | `oklch(0.81 0.13 80)` | escalate, awaiting, held, invalidated, medium risk |
+| `danger` | `oklch(0.70 0.18 25)` | deny, failed, high risk, kill switch, lockdown |
+| `neutral` | `--color-neutral-500` | skipped, expired, cancelled, rejected |
 
-Fonts: Inter for UI, JetBrains Mono for commands and output (SF Pro / SF Mono in the app). Spacing on a 4 px grid. All text meets WCAG AA contrast on `bg` and `surface`.
+Each colour has a 100–900 tonal ramp (OKLCH). On this dark ground use 700–900 for tinted fills, 500 as base, 100–300 for text on tints. Status badges are the status colour at about 16 % as background with the full colour as text and border.
 
-**Status badges** (same everywhere): `● Low risk`, `▲ Medium risk`, `■ High risk`, `✓ Succeeded`, `✕ Failed`, `◌ Running`, `⏸ Awaiting`, `— Skipped`.
+- **Fonts:** Inter (headings and body, max weight 500), JetBrains Mono for commands, output, IDs and hashes. SF Pro / SF Mono in the iPhone app.
+- **Icons:** Phosphor (`@phosphor-icons/react` on web; SF Symbols equivalents in the app).
+- **Spacing:** compact scale (density 0.7×) via `--space-*`; radii `--radius-sm/md/lg` = 4/8/14 px.
+- **States:** hover and pressed from the accent ramp; focus is a 2 px accent `:focus-visible` ring; disabled is 45 % opacity.
+- **Never** pure black or white, never large saturated fills, never hard-coded hex in components.
+
+**Status badges** (same everywhere): `● Low risk`, `▲ Medium risk`, `■ High risk`, `✓ Succeeded`, `✕ Failed`, `◌ Running`, `⏸ Awaiting`, `⏸ Held`, `◌ Re-reviewing`, `⊘ Invalidated`, `— Skipped`, `↓ Tighten`, `↑ Loosen`.
+
+**Language:** English or Dansk (setting, applies to dashboard and app). Commands, IDs and policy paths are never translated.
 
 **Formats:** dates `20.10.2026`, times `14:32` (24-hour, Europe/Copenhagen), durations `1 min 12 s`, sizes `MB`/`GB`. Relative times ("3 min ago") with the exact time on hover/long-press.
 
 ### 17.3 Web dashboard (desktop-first)
 
-**Layout:** left sidebar (Approvals with count badge, Live feed, Plans, Schedules, Targets, Audit log), top bar with target status pills (`dev ● online`), gatekeeper status (`local ● · openai ●`), and a red **Kill switch** button that's always visible while anything is running.
+**Sign-in:** a passkey-only page (no passwords) shown when signed out or when the session expires, with a banner saying which page you'll return to. States: waiting for the browser prompt, cancelled, and "This passkey isn't registered with Warden" with a hint to use a registered or backup key. Sessions last 12 hours. The footer says the dashboard is only reachable over WireGuard.
+
+**Layout:** left sidebar (Approvals with count badge, Plans, Live feed, Schedules, Agents, Groups, Policy, Audit log, Settings; footer shows "Signed in with passkey" and Keyboard shortcuts), top bar with agent status pills (`dev ● v42`), gatekeeper status (`local ● · openai ●`), and a red **Lockdown** button (plus **Kill switch** whenever something is running).
+
+**Plans** — every plan, newest first, searchable by goal, plan ID or command, with filter tabs and counts: All, Awaiting, Approved & running, Succeeded, Failed, Invalidated, Rejected & expired. Columns: status, goal (with plan ID and "revises …"), target, steps, requested by, proposed.
 
 **Approvals** — list of pending plan cards, oldest first. Each card: goal, target, requested by (`claude-code`), risk badge, final verdict, number of steps, and an expiry countdown. Revisions show `Revision of #pln_…` and a "changed steps" count.
 
@@ -553,7 +748,10 @@ Fonts: Inter for UI, JetBrains Mono for commands and output (SF Pro / SF Mono in
 2. **Verdict panel:** policy result, then one row per gatekeeper reviewer (name, verdict, one-sentence summary). Disagreement between reviewers is highlighted.
 3. **Steps:** numbered list. Each step shows purpose (plain text), the full command (mono, `surface-2` block), cwd, timeout, and reviewer notes inline under the step if any reviewer flagged it.
 4. **Diff (revisions only):** toggle between "Steps" and "Diff vs. previous". Side-by-side; steps already run in the failed plan are greyed with their result; changed lines highlighted; the failing step's error output shown above the diff.
-5. **Sticky action bar:** `Reject` (optional reason) and `Approve`. Approve stays disabled until the steps list has been scrolled to the end. **High-risk** plans also require a passkey confirmation.
+5. **Sticky action bar:** `Reject` (optional reason), `Approve with edits` and `Approve`. A hint explains what's needed ("Scroll to the last step to enable Approve", "Your passkey signs the approval"). Approve stays disabled until the steps list has been scrolled to the end. Passkey rules follow 10.0.
+6. **Approve with edits:** commands become editable inline; *Submit edits* sends the plan back to `reviewing` ("◌ Re-reviewing your edits · policy, then gatekeepers"). Nothing runs until you approve the re-reviewed plan.
+7. **After approval:** a summary of what was approved (hash, signature, risk at approval, verdicts). If the agent can't run it yet, a warning shows why it's held.
+8. **Diagnosis (failed plans):** the read-only commands Claude ran with their output and exit codes, Claude's explanation, and a link to the proposed revision.
 
 **Running plan:** same page; each step gets a live status icon, and the active step expands into a terminal view (ANSI colours, auto-scroll that pauses when you scroll up, "Jump to live" button, copy button). Output is capped per `output_cap_mb`.
 
@@ -561,13 +759,33 @@ Fonts: Inter for UI, JetBrains Mono for commands and output (SF Pro / SF Mono in
 
 **Schedules:** table with name, target, cron in plain language ("Every day at 03:00"), next run, last result, expiry. "Save as schedule" on a succeeded plan creates a template that needs its own approval.
 
-**Targets:** online status, last SSH check, containers (read-only list).
+**Agents:** per agent: online status, last heartbeat, agent version, policy version (`✓ v42` / `⏳ v41`), certificate fingerprint, containers (read-only). Actions: *Add agent* (shows one-time token), *Revoke*.
+
+**Groups:** one card per group with members (with kind, e.g. `LXC · unprivileged`), restriction tags ("Read-only restricted", "Passkey always", "Unanimous gatekeepers") and a summary of its rules. *New group* and *Edit* open an editor where members are toggled as chips, read-only mode is a segmented control ("Stricter to the right"), and each field says whether a change tightens or loosens. Saving goes through the same Publish flow as Policy.
+
+**Policy:** rollout box at the top (`2 of 2 agents on v42`), rules shown as a **Form** or **View YAML**, editor with diff preview, change classification badge (`Tighten` green / `Loosen` amber), test-suite result, *Publish* (passkey), rollout progress per agent, version history. Loosening shows "Waiting for offline signature" until it's uploaded. A red **Lockdown** button lives here and in the top bar menu.
 
 **Audit log:** searchable table, JSONL export, and a "Hash chain verified ✓" indicator.
 
+**Settings:** every change is written to the audit log with before/after values, and Claude can neither read nor change settings. Sections:
+
+- *Retention:* audit log entries (30/90/180/365 days/forever, default 90), command output (7/30/90/180 days/forever, default 90), JSONL export rotation (daily/weekly/off) and export folder. Shortening shows a warning ("pruned tonight at 03:30"); pruned ranges leave a signed checkpoint so the hash chain still verifies.
+- *Approvals:* the rules in 10.0.
+- *Gatekeepers:* mode (strictest wins, locked), reviewer timeout, send command output to cloud reviewers (default off), scrub secrets (always on).
+- *Execution limits:* read-only view of policy limits and kill-switch behaviour; edited on the Policy page.
+- *Passkeys & sessions:* registered passkeys (e.g. "MacBook", a backup passkey) with last use, *Register passkey*, remove, and active sessions with IP. Adding or removing a passkey publishes the new approver list to agents for end-to-end approval checks; removing one counts as tighten, adding one as loosen.
+- *Signing keys:* public halves only, each with *Rotate…* or *Replace…*:
+  - **Online policy key / approval key:** rotate with passkey. The new public key ships in the next bundle, and rollout progress is shown per agent ("rolling out in v43 · 2 of 5 agents").
+  - **Offline policy key** (e.g. YubiKey 5C): *Replace offline key…* — the new key must be signed by the current offline key, or by the **backup offline key** if the current one is lost. Signing happens on your own machine (`warden-sign trust-offline --new <key> --yubikey`), then you upload the signature file.
+  - **Backup offline key:** a second YubiKey registered with *Register backup offline key…*. Without one, a lost offline key means reinstalling the trust root on every agent by hand and re-enrolling them, so the UI warns until it's registered.
+  - **Internal CA:** expiry date, a warning from 90 days before ("Renew before then or agents can't reconnect"), and *Renew CA…*, which re-issues every agent certificate with per-agent progress.
+- *Schedules:* default expiry for new schedules (30/90/180 days).
+- *iPhone notifications:* on/off per event type.
+- *Language & time:* English/Dansk; time zone, format and units shown (locked).
+
 **Keyboard:** `j`/`k` move through lists, `Enter` opens, `r` opens reject, `?` shows shortcuts. There is no single-key approve.
 
-**Phone browser (basic only):** below 768 px wide the dashboard shows a single column with just Approvals, Plan detail (approve/reject) and the kill switch. Other pages show "Use the desktop dashboard or the Warden app".
+**Phone browser (basic only):** below 768 px wide the dashboard shows a single column with just Approvals, Plan detail (approve/reject) and the kill switch. Other pages show "<Page> isn't available in a phone browser · Use the desktop dashboard or the Warden app" with a button back to Approvals.
 
 ### 17.4 iPhone app
 
@@ -576,10 +794,11 @@ Native SwiftUI, dark only, standard iOS navigation.
 **Tabs:** Approvals (badge), Activity, Schedules, Settings.
 
 - **Approvals / Plan detail:** same order as the web (header → verdicts → steps → diff). Commands wrap in SF Mono and are fully visible. Bottom bar: `Reject` and `Approve`; approve needs Face ID, and high-risk plans also need you to scroll through all steps first.
-- **Activity:** live feed plus running plans with a step progress bar; tap into live output.
+- **Activity:** live feed plus running plans with a step progress bar; tap a step for full-screen live output (monospace, ANSI colours, Jump to live, copy, exit code, and "Output truncated at 1 MB" when the cap is hit).
+- **Approve with edits:** each step opens in a full-screen editor showing the original and your version; submitting sends the plan to re-review, and approving still needs Face ID. Failed plans show the Diagnosis panel; held and invalidated plans show why.
 - **Kill switch:** available on any running plan and in Activity. Requires **press and hold for 2 seconds** with haptic feedback.
 - **Schedules:** list with next run and last result; pause/resume (pausing needs no approval, resuming a changed template does).
-- **Settings:** server URL, passkey sign-in, notification preferences per event type, "Test connection".
+- **Settings:** Lockdown (press and hold), agent status overview, server URL, passkey sign-in, notification preferences per event type, "Test connection".
 
 **Notifications:**
 
@@ -588,6 +807,7 @@ Native SwiftUI, dark only, standard iOS navigation.
 | Approval needed | `Approval needed · dev` | `Deploy myapp and verify HTTP · 3 steps · ● Low risk` | Approve (Face ID), Reject, open |
 | Approval needed, high risk | `■ High-risk plan · dev` | goal + step count | Open only — must review in app |
 | Plan failed | `✕ Failed at step 2 · dev` | goal + first line of error | Open |
+| Agent refused a step | `▲ Agent refused a step · dev` | plan ID + reason, e.g. "rm resolved outside /srv/dev through a symlink" | Open |
 | Scheduled run done | `✓ nightly-dev-rebuild` | duration + result | Open |
 
 **Later options:** a widget showing pending approvals (WidgetKit works on the build pipeline); Live Activities for running plans need extra Apple setup, so prove them in a test app first.
@@ -606,7 +826,7 @@ The prompt shown in Claude's client contains: goal, target, risk, gatekeeper sum
 | Plan decided elsewhere | Toast "Approved on iPhone 14:32", buttons disabled, view refreshes |
 | Plan expired while open | Buttons disabled, "Expired at 14:45 — ask Claude to propose again" |
 | Gatekeeper unavailable | Reviewer row shows "Unavailable — counted as escalate" |
-| Target offline | Target pill red; new plans for it show a warning |
+| Agent offline or behind on policy | Agent pill red or amber; plans for it can be reviewed but not run until it's current |
 | Session expired | Redirect to sign-in, then back to the same page |
 
 Accessibility: Dynamic Type and VoiceOver labels in the app; full keyboard navigation and visible focus rings on the web.
@@ -618,6 +838,6 @@ Accessibility: Dynamic Type and VoiceOver labels in the app; full keyboard navig
 - How much VRAM does the GPU have? (Decides the local model size.)
 - Domain names: is `.lan` right, or do you use a real domain with split DNS?
 - For public MCP later: run OAuth inside Warden, or put an identity provider (e.g. Authentik) in front?
-- Should approvals support "approve with edits" (human tweaks a step, producing a new hash)?
-- Retention for audit logs and command output (proposal: 90 days)?
-- UI language: English or Danish?
+- Backup for the offline key: the design assumes a YubiKey 5C. A second YubiKey stored safely is strongly recommended, otherwise losing it means you can never loosen policy again.
+
+Resolved by the design: approve with edits (yes, 4), end-to-end passkey approvals (yes, on by default, 10.0), retention (90 days default, Settings), UI language (English or Dansk, user setting).
