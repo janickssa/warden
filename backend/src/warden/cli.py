@@ -86,20 +86,24 @@ def _print_plan(p: Plan, *, full: bool) -> None:
     if p.revises:
         _out(f"  revises: {p.revises}")
     _out(f"  hash:    {p.hash}")
-    _out(f"  expires: {fmt_datetime(p.expires_at)}")
+    if p.status in (PlanStatus.AWAITING_APPROVAL, PlanStatus.APPROVED, PlanStatus.HELD):
+        _out(f"  expires: {fmt_datetime(p.expires_at)}")
     if not full:
         return
     _out(f"  policy:  {'passed' if p.policy_result.ok else 'denied'}")
     for v in p.policy_result.violations:
         where = f"step {v.step}: " if v.step else ""
         _out(f"    ✕ {where}{v.code} · {v.message}")
-    if p.gatekeepers:
+    if not p.policy_result.ok:
+        _out("  gatekeepers: not run (policy denied, which is final)")
+    elif p.gatekeepers:
         for g in p.gatekeepers:
             shown = "○ Unavailable · counted as escalate" if g.unavailable else g.verdict.value
             _out(f"  gatekeeper {g.name} ({g.model}): {shown} · {g.risk.value} · {g.summary}")
     else:
         _out("  gatekeepers: none configured · counted as escalate")
-    _out(f"  final verdict: {p.final_verdict.value}")
+    if p.policy_result.ok:
+        _out(f"  final verdict: {p.final_verdict.value}")
     if p.invalid_reason:
         _out(f"  invalidated: {p.invalid_reason}")
     if p.held_reason:

@@ -33,7 +33,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 
 | # | Milestone | Main deliverables | Done when (README §15) | Proven by |
 |---|---|---|---|---|
-| M1 | Core | Plan store, state machine, canonical hashing, policy engine, read-only checker, audit chain, CLI approval | Plans propose, approve and validate locally | `tests/e2e/test_m1_local_flow.py` + documented CLI session in `docs/m1-demo.md` |
+| M1 ☑ | Core | Plan store, state machine, canonical hashing, policy engine, read-only checker, audit chain, CLI approval | Plans propose, approve and validate locally | `tests/e2e/test_m1_local_flow.py` + documented CLI session in `docs/m1-demo.md` |
 | M2 | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
 | M3 | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_rollout.py` (5 agents, timed), plus classifier property tests |
 | M4 | MCP | FastMCP tools (§6), Streamable HTTP + stdio, elicitation, MCP auth | Works end-to-end from Claude Code over WireGuard | MCP client test + manual Claude Code session in `docs/m4-demo.md` |
@@ -260,6 +260,19 @@ different user and can't reach them. See DECISIONS D-10.
 12. `test: M1 end-to-end local flow` + `docs/m1-demo.md`; mark M1 ☑ here
 
 ---
+
+### M1 result ☑ (21.10.2026)
+
+Done-when "plans propose, approve and validate locally" is proven by `backend/tests/e2e/test_m1_local_flow.py`
+and the recorded session in `docs/m1-demo.md`. 749 tests pass; `ruff`, `ruff format` and `mypy --strict`
+are clean. Refinements made along the way are listed in DECISIONS.md section B2 (M1-01 … M1-14).
+
+Differences from the plan above:
+- Commits 6–8 became two: the matcher/baseline/engine with the fixture corpus, then groups and read-only.
+- The corpus has 276 cases (target was ≥ 150), plus 30 symlink tests on a real filesystem.
+- `PlanService` also has `start_run` / `finish_run` with the stop-on-first-failure reducer, ready for the M2
+  dispatcher. Nothing executes commands in M1.
+- CI: `.github/workflows/backend.yml` runs the same checks on every push.
 
 ## M2 Agent — outline (detailed before starting)
 

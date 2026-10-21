@@ -14,7 +14,7 @@ Claude proposes an exact list of commands → hard policy rules check them → o
 These are the security model. Every design and code decision must preserve them. If a feature request conflicts with one, stop and ask the human.
 
 1. **Nothing state-changing runs without an approved plan.** The only exception is the read-only allowlist (section 8).
-2. **An approved plan is immutable.** It is hashed (SHA-256 over the canonical JSON of its steps) at approval time. Agents refuse to run anything whose hash doesn't match.
+2. **An approved plan is immutable.** It is hashed (SHA-256 over the canonical JSON of its plan ID, target, goal and steps; section 5) and the human approves that hash. Agents refuse to run anything whose hash doesn't match, or whose target isn't themselves.
 3. **Claude can never approve its own plans.** No MCP tool approves, edits policy, or changes approval state. Approval only comes from a human channel authenticated separately from the MCP connection.
 4. **Stop on first failure.** A non-zero exit code, a timeout or a policy violation halts the plan. The remaining steps are marked `skipped`.
 5. **A failed plan is never resumed.** Claude must submit a new plan with `revises: <old_plan_id>`. The human sees a diff against the old plan.
@@ -159,6 +159,9 @@ stateDiagram-v2
     approved --> invalidated: new policy version denies a step
     approved --> held: agent offline, behind on policy, or lockdown
     held --> approved: agent current again / lockdown lifted
+    held --> invalidated: new policy version denies a step
+    approved --> expired: not started within the approval window
+    held --> expired: not started within the approval window
     approved --> running: execute_plan
     running --> succeeded: all steps exit 0
     running --> failed: step fails / timeout
@@ -167,6 +170,8 @@ stateDiagram-v2
     succeeded --> [*]
 ```
 
+- `reviewed` in the diagram is a moment, not a stored status: policy and gatekeepers finish inside `proposed → awaiting_approval`.
+- **Approval window:** approving signs the plan for `approvals.expiry_min` (default 30 min) from the moment of approval. An approved or held plan that hasn't started by then expires.
 - A gatekeeper `deny` still reaches the human, shown as a recommended rejection. The human has the final say, except over a **policy** deny, which is final.
 - The kill switch (dashboard, app, or `warden kill`) stops the running step: SIGTERM, then SIGKILL after 10 seconds.
 - **Approve with edits:** the human may change commands before approving. The plan goes to `reviewing`, runs through policy and every gatekeeper again, gets a new hash, and returns to `awaiting_approval`. Nothing runs until the re-reviewed plan is approved. Edited steps are marked `edited: true` and logged with a before/after diff.
@@ -187,7 +192,7 @@ stateDiagram-v2
   "target": "dev",
   "requested_by": "claude-code",
   "steps": [Step],
-  "hash": "sha256:...",                // set at approval
+  "hash": "sha256:...",                // over {v, plan_id, target, goal, revises, steps}; recomputed at approval and before dispatch
   "status": "awaiting_approval",      // proposed | reviewing | awaiting_approval | approved | held | running
                                        // succeeded | failed | rejected | expired | cancelled | invalidated
   "invalidated_by": 42 | null,         // policy version, with "invalid_reason"
@@ -402,7 +407,7 @@ Runs without a plan so Claude can investigate failures without spamming you:
 
 `docker ps`, `docker logs --tail N <allowed>`, `docker inspect <allowed>`, `docker compose ps`, `ls`, `cat`, `head`, `tail`, `stat`, `df -h`, `free -m`, `git status`, `git log`, `curl -I` / plain GET to allowed hosts.
 
-All path arguments must resolve inside the target's `workspace_roots`. Read-only runs are logged and shown in the live feed.
+All path arguments must be absolute and resolve inside the target's `workspace_roots` (git takes its path as `git -C <path> status|log`; `docker logs` needs `--tail N`; `tail -f` is refused). Read-only runs are logged and shown in the live feed.
 
 ---
 

@@ -64,6 +64,8 @@ def test_policy_denied_plan_shows_reason(cli: Cli) -> None:
     out = cli.ok("plan", "show", pid)
     assert "rejected" in out
     assert "forbidden_char" in out
+    assert "not run (policy denied" in out
+    assert "final verdict" not in out
 
 
 def test_approve_with_edits_and_reject(cli: Cli) -> None:
