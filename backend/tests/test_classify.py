@@ -28,23 +28,13 @@ def base() -> dict[str, Any]:
     return {"rules": compile_rules(rules_for("dev"), t), "approval_keys": [KEY]}
 
 
-def edit(fn: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
+def edit(fn: Callable[[dict[str, Any]], object]) -> dict[str, Any]:
     b = base()
     fn(b["rules"])
     return b
 
 
-def _r(path: str) -> Callable[[dict[str, Any]], Any]:
-    def get(r: dict[str, Any]) -> Any:
-        cur = r
-        for p in path.split("."):
-            cur = cur[p]
-        return cur
-
-    return get
-
-
-MUTATIONS: list[tuple[str, Callable[[dict[str, Any]], None], str]] = [
+MUTATIONS: list[tuple[str, Callable[[dict[str, Any]], object], str]] = [
     ("add deny path", lambda r: r["deny_paths"].append("/srv/dev/secret"), "tighten"),
     ("remove deny path", lambda r: r["deny_paths"].remove("/etc"), "loosen"),
     (
@@ -94,7 +84,7 @@ MUTATIONS: list[tuple[str, Callable[[dict[str, Any]], None], str]] = [
 
 
 @pytest.mark.parametrize(("name", "fn", "expected"), MUTATIONS, ids=[m[0] for m in MUTATIONS])
-def test_mutation(name: str, fn: Callable[[dict[str, Any]], None], expected: str) -> None:
+def test_mutation(name: str, fn: Callable[[dict[str, Any]], object], expected: str) -> None:
     assert classify(base(), edit(fn)).cls == expected
 
 
