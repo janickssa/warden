@@ -1,0 +1,7 @@
+# sec-auth is in group high-security (read_only restricted, extra deny patterns, max 10 steps).
+- {id: grp-ro-home, mode: read_only, target: sec-auth, command: "cat /home/admin/.ssh/config", expect: deny, code: read_only_denied_path}
+- {id: grp-ro-inside-ok, mode: read_only, target: sec-auth, command: "cat /srv/app/config.yml", expect: allow}
+- {id: grp-docker-exec-pattern, kind: docker, target: sec-auth, cwd: /srv/app, command: "docker exec vault sh", expect: deny, code: deny_pattern}
+- {id: grp-curl-post-pattern, kind: http_check, target: sec-auth, cwd: /srv/app, command: "curl -X POST http://localhost/", expect: deny, code: deny_pattern}
+- {id: grp-dev-not-affected, kind: http_check, target: dev, command: "curl -I http://localhost/", expect: allow}
+- {id: grp-dev-no-group-pattern, kind: docker, target: dev, command: "docker restart dev-myapp-app-1", expect: allow}

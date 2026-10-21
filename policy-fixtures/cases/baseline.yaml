@@ -1,0 +1,14 @@
+- {id: rm-root-pattern, command: "rm -rf /", expect: deny, code: baseline_rm_root}
+- {id: rm-no-preserve, command: "rm -rf --no-preserve-root /", expect: deny, code: baseline_rm_root}
+- {id: rm-top-level, command: "rm -rf /srv", expect: deny, code: baseline_rm_root}
+- {id: rm-dotdot-root, command: "rm -rf ../../..", expect: deny, code: baseline_rm_root}
+- {id: chmod-setuid-octal, command: "chmod 4755 /srv/dev/myapp/x", expect: deny, code: baseline_setuid}
+- {id: chmod-setuid-symbolic, command: "chmod u+s /srv/dev/myapp/x", expect: deny, code: baseline_setuid}
+- {id: chmod-777-pattern, command: "chmod 777 /srv/dev/myapp/x", expect: deny, code: deny_pattern}
+- {id: protected-usr, command: "npm --prefix /usr/local ci", expect: deny, code: baseline_protected_path}
+- {id: protected-boot, command: "npm run /boot/vmlinuz", expect: deny, code: baseline_protected_path}
+- {id: protected-agent-binary, command: "npm run /usr/local/bin/warden-agent", expect: deny, code: baseline_protected_path}
+- {id: protected-agent-state, command: "npm run /var/lib/warden-agent/keys", expect: deny, code: baseline_protected_path}
+- {id: protected-run-socket, command: "npm run /run/warden/docker-proxy.sock", expect: deny, code: baseline_protected_path}
+- {id: protected-proc, command: "npm run /proc/self/environ", expect: deny, code: baseline_protected_path}
+- {id: protected-cwd, cwd: /etc, command: "npm ci", expect: deny, code: baseline_protected_path}

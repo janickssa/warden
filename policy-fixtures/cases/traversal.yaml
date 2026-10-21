@@ -1,0 +1,26 @@
+- {id: dotdot-out-of-workspace, kind: git, command: "git -C ../../../etc status", expect: deny, code: denied_path}
+- {id: dotdot-to-prod, kind: git, command: "git -C /srv/dev/../prod/app status", expect: deny, code: denied_path}
+- {id: dotdot-to-srv, command: "npm --prefix /srv/dev/../other ci", expect: deny, code: outside_workspace}
+- {id: dotdot-relative-many, command: "npm --prefix ../../../../../tmp ci", expect: deny, code: outside_workspace}
+- {id: dotdot-in-value, command: "npm run ../../../../etc/passwd", expect: deny, code: denied_path}
+- {id: absolute-etc, kind: git, command: "git -C /etc status", expect: deny, code: denied_path}
+- {id: absolute-tmp, command: "npm --prefix /tmp ci", expect: deny, code: outside_workspace}
+- {id: double-slash, kind: git, command: "git -C //etc status", expect: deny, code: denied_path}
+- {id: trailing-dot, kind: git, command: "git -C /srv/dev/.. status", expect: deny, code: outside_workspace}
+- {id: prefix-confusion, kind: git, command: "git -C /srv/devil status", expect: deny, code: outside_workspace}
+- {id: tilde-home, kind: git, command: "git -C ~/x status", expect: deny, code: tilde_path}
+- {id: tilde-user, kind: git, command: "git -C ~root status", expect: deny, code: tilde_path}
+- {id: long-flag-value-path, command: "npm ci --prefix=/srv/prod/app", expect: deny, code: denied_path}
+- {id: attached-short-path, kind: git, command: "git -C/etc status", expect: deny}
+- {id: cwd-outside, cwd: /tmp, command: "npm ci", expect: deny, code: outside_workspace}
+- {id: cwd-denied, cwd: /srv/prod, command: "npm ci", expect: deny, code: denied_path}
+- {id: cwd-relative, cwd: srv/dev, command: "npm ci", expect: deny, code: bad_cwd}
+- {id: cwd-dotdot, cwd: /srv/dev/../../etc, command: "npm ci", expect: deny, code: denied_path}
+- {id: compose-file-outside, kind: docker, command: "docker compose -p dev-myapp -f /srv/other/compose.yml up -d", expect: deny, code: outside_workspace}
+- {id: compose-envfile-traversal, kind: docker, command: "docker compose -p dev-myapp --env-file ../../../root/.env up -d", expect: deny, code: denied_path}
+- {id: clone-dest-outside, kind: git, cwd: /srv/dev, command: "git clone https://github.com/you/x /srv/prod/x", expect: deny, code: denied_path}
+- {id: clone-dest-tmp, kind: git, cwd: /srv/dev, command: "git clone https://github.com/you/x /tmp/x", expect: deny, code: outside_workspace}
+- {id: ro-dotdot, mode: read_only, command: "cat /srv/dev/../../etc/shadow", expect: deny, code: denied_path}
+- {id: ro-relative, mode: read_only, command: "cat myapp/package.json", expect: deny, code: relative_path}
+- {id: ro-tmp, mode: read_only, command: "ls /tmp", expect: deny, code: outside_workspace}
+- {id: ro-home, mode: read_only, command: "cat /home/admin/.ssh/config", expect: deny, code: denied_path}

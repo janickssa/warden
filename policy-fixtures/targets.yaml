@@ -1,0 +1,9 @@
+- name: dev
+  kind: VM
+  workspace_roots: [/srv/dev]
+- name: dev2
+  kind: VM
+  workspace_roots: [/srv/dev]
+- name: sec-auth
+  kind: LXC · unprivileged
+  workspace_roots: [/srv/app]

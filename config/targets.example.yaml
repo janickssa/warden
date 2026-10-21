@@ -1,0 +1,11 @@
+# Targets (README section 2). Compiled into each agent's policy bundle.
+- name: dev
+  agent_id: null            # set at enrollment (M2)
+  kind: VM
+  workspace_roots: [/srv/dev]
+  docker_socket: /run/warden/docker-proxy.sock
+- name: dev2
+  agent_id: null
+  kind: VM
+  workspace_roots: [/srv/dev]
+  docker_socket: /run/warden/docker-proxy.sock

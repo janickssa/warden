@@ -1,0 +1,26 @@
+- {id: cyrillic-c-curl, kind: http_check, command: "\u0441url -I http://localhost/", expect: deny, code: non_ascii_token}
+- {id: cyrillic-e-docker, kind: docker, command: "dock\u0435r ps", expect: deny, code: non_ascii_token}
+- {id: ukrainian-i-git, kind: git, command: "g\u0456t status", expect: deny, code: non_ascii_token}
+- {id: fullwidth-npm, command: "\uff4e\uff50\uff4d ci", expect: deny, code: non_ascii_token}
+- {id: latin-accent-program, command: "np\u00e9 ci", expect: deny, code: non_ascii_token}
+- {id: cyrillic-flag, kind: http_check, command: "curl --\u043eutput=/srv/dev/x http://localhost/", expect: deny, code: non_ascii_token}
+- {id: greek-short-flag, kind: http_check, command: "curl -\u03bf x http://localhost/", expect: deny, code: non_ascii_token}
+- {id: unicode-hyphen-flag, kind: git, command: "git \u2010C /srv/dev status", expect: deny, code: disallowed_char}
+- {id: cyrillic-in-path, kind: git, command: "git -C /srv/d\u0435v/myapp status", expect: deny, code: non_ascii_token}
+- {id: danish-in-path, command: "npm --prefix /srv/dev/s\u00f8g ci", expect: deny, code: non_ascii_token}
+- {id: idn-lookalike-host, kind: git, cwd: /srv/dev, command: "git clone https://g\u0456thub.com/you/x /srv/dev/x", expect: deny, code: non_ascii_token}
+- {id: zero-width-space, command: "npm ci\u200b", expect: deny, code: disallowed_char}
+- {id: zero-width-joiner, command: "npm c\u200di", expect: deny, code: disallowed_char}
+- {id: word-joiner, command: "npm\u2060 ci", expect: deny, code: disallowed_char}
+- {id: bom, command: "\ufeffnpm ci", expect: deny, code: disallowed_char}
+- {id: rtl-override, kind: git, command: "git log --grep '\u202eabc'", expect: deny, code: disallowed_char}
+- {id: lri-isolate, kind: git, command: "git log --grep '\u2066x\u2069'", expect: deny, code: disallowed_char}
+- {id: no-break-space, command: "npm\u00a0ci", expect: deny, code: disallowed_char}
+- {id: soft-hyphen, command: "npm c\u00adi", expect: deny, code: disallowed_char}
+- {id: fullwidth-semicolon-value, kind: git, command: "git log --grep 'a\uff1bb'", expect: deny, code: disallowed_char}
+- {id: cyrillic-in-message, kind: git, command: "git log --grep 'Tilf\u00f8j l\u043egin'", expect: deny, code: disallowed_char}
+- {id: greek-in-value, command: "npm run \u0394", expect: deny, code: disallowed_char}
+- {id: emoji-in-value, command: "npm run build\u2705", expect: deny, code: disallowed_char}
+- {id: danish-value-ok, kind: git, command: "git log --grep '\u00c5bn \u00e6rlig \u00f8l'", expect: allow}
+- {id: ro-cyrillic-path, mode: read_only, command: "cat /srv/d\u0435v/myapp/x", expect: deny, code: non_ascii_token}
+- {id: ro-zero-width, mode: read_only, command: "ls /srv/dev\u200b", expect: deny, code: disallowed_char}

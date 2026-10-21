@@ -1,0 +1,25 @@
+- {id: git-http-scheme, kind: git, cwd: /srv/dev, command: "git clone http://github.com/you/x x", expect: deny, code: git_url_denied}
+- {id: git-ssh-scheme, kind: git, cwd: /srv/dev, command: "git clone ssh://git@github.com/you/x x", expect: deny, code: git_url_denied}
+- {id: git-scp-like, kind: git, cwd: /srv/dev, command: "git clone git@github.com:you/x.git x", expect: deny, code: git_url_denied}
+- {id: git-file-url, kind: git, cwd: /srv/dev, command: "git clone file:///srv/prod/repo x", expect: deny, code: git_url_denied}
+- {id: git-ext-transport, kind: git, cwd: /srv/dev, command: "git clone ext::touch x", expect: deny, code: git_url_denied}
+- {id: git-other-host, kind: git, cwd: /srv/dev, command: "git clone https://evil.example/you/x x", expect: deny, code: git_url_denied}
+- {id: git-host-suffix-trick, kind: git, cwd: /srv/dev, command: "git clone https://github.com.evil.example/x x", expect: deny, code: git_url_denied}
+- {id: git-userinfo-trick, kind: git, cwd: /srv/dev, command: "git clone https://github.com@evil.example/x x", expect: deny, code: git_url_denied}
+- {id: git-credentials, kind: git, cwd: /srv/dev, command: "git clone https://user:pw@github.com/you/x x", expect: deny, code: git_url_denied}
+- {id: git-odd-port, kind: git, cwd: /srv/dev, command: "git clone https://github.com:8443/you/x x", expect: deny, code: git_url_denied}
+- {id: git-clone-no-url, kind: git, cwd: /srv/dev, command: "git clone /srv/dev/other x", expect: deny, code: git_url_denied}
+- {id: git-fetch-url, kind: git, command: "git fetch https://evil.example/x", expect: deny, code: git_url_denied}
+- {id: git-pull-ok-url, kind: git, command: "git pull https://github.com/you/myapp main", expect: allow}
+- {id: http-other-host, kind: http_check, command: "curl -I http://evil.example/", expect: deny, code: http_host_denied}
+- {id: http-metadata-ip, kind: http_check, command: "curl -I http://169.254.169.254/latest/meta-data/", expect: deny, code: http_host_denied}
+- {id: http-wildcard-apex, kind: http_check, command: "curl -I http://dev.lan/", expect: deny, code: http_host_denied}
+- {id: http-wildcard-suffix-trick, kind: http_check, command: "curl -I http://x.dev.lan.evil.example/", expect: deny, code: http_host_denied}
+- {id: http-userinfo-trick, kind: http_check, command: "curl -I http://localhost@evil.example/", expect: deny, code: http_url_denied}
+- {id: http-file-scheme, kind: http_check, command: "curl file:///etc/passwd", expect: deny, code: http_url_denied}
+- {id: http-gopher, kind: http_check, command: "curl gopher://localhost:6379/_x", expect: deny, code: http_url_denied}
+- {id: http-two-urls, kind: http_check, command: "curl -I http://localhost/ http://evil.example/", expect: deny, code: http_host_denied}
+- {id: http-no-url, kind: http_check, command: "curl -I", expect: deny, code: http_url_denied}
+- {id: http-bare-host, kind: http_check, command: "curl localhost:8080", expect: deny, code: http_url_denied}
+- {id: http-wildcard-ok, kind: http_check, command: "curl -I https://api.dev.lan/health", expect: allow}
+- {id: http-case-insensitive-host, kind: http_check, command: "curl -I http://LOCALHOST:8080/", expect: allow}

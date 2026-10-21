@@ -1,0 +1,61 @@
+[
+  {
+    "name": "empty_object",
+    "value": {},
+    "canonical": "{}",
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  {
+    "name": "sorted_keys",
+    "value": {
+      "b": 1,
+      "a": 2,
+      "A": 3,
+      "aa": []
+    },
+    "canonical": "{\"A\":3,\"a\":2,\"aa\":[],\"b\":1}",
+    "sha256": "5cf2a382bf9e8fb9905464bf7bdb1f08b4cee052c1e555bc3729f9d53acb76a2"
+  },
+  {
+    "name": "nested",
+    "value": {
+      "steps": [
+        {
+          "n": 1,
+          "cmd": "git status"
+        }
+      ],
+      "v": 1,
+      "revises": null,
+      "ok": true
+    },
+    "canonical": "{\"ok\":true,\"revises\":null,\"steps\":[{\"cmd\":\"git status\",\"n\":1}],\"v\":1}",
+    "sha256": "28fd2da7d3b916cb6c62af26234094447f5e2c577fe70d7c8608739d9751ae6c"
+  },
+  {
+    "name": "danish_utf8",
+    "value": {
+      "m": "Tilføj login på åbn ærlig"
+    },
+    "canonical": "{\"m\":\"Tilføj login på åbn ærlig\"}",
+    "sha256": "3be10935ed1f73563af01cc426bd83f2f96e5dba2ce902beebd65b8efc2666a3"
+  },
+  {
+    "name": "escapes",
+    "value": {
+      "q": "say \"hi\" \\ back",
+      "html": "<a>&</a>"
+    },
+    "canonical": "{\"html\":\"<a>&</a>\",\"q\":\"say \\\"hi\\\" \\\\ back\"}",
+    "sha256": "18e7c14636baefaf700c9ad8d928f69ee31f91a1aef677a0ab825a4014898b97"
+  },
+  {
+    "name": "negative_and_max",
+    "value": {
+      "a": -5,
+      "b": 9007199254740991
+    },
+    "canonical": "{\"a\":-5,\"b\":9007199254740991}",
+    "sha256": "74e589e256e9e2fcffac9b79aaf280d3e472fe740248dae2ef99d0d1e990cd80"
+  }
+]
