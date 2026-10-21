@@ -39,11 +39,21 @@ def _abs_path(value: str) -> str:
     return norm
 
 
+# Agents use Go's RE2, which has no lookaround, backreferences, atomic groups or possessive quantifiers.
+# Refusing them here keeps Warden and every agent agreeing on what a pattern means.
+_NOT_RE2 = re.compile(r"\(\?(?:[=!]|<[=!]|>|P=|\(|[aiLmsux-]+[:)])|\\[1-9]|[*+?}][+]")
+
+
 def _check_regex(pattern: str) -> str:
     try:
         re.compile(pattern)
     except re.error as exc:
         raise ValueError(f"invalid regex {pattern!r}: {exc}") from exc
+    if _NOT_RE2.search(pattern) or not all(0x20 <= ord(c) <= 0x7E for c in pattern):
+        raise ValueError(
+            f"regex {pattern!r} uses syntax agents can't run (lookaround, backreferences, inline flags, "
+            "possessive quantifiers or non-ASCII)"
+        )
     return pattern
 
 

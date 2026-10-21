@@ -35,6 +35,9 @@ def test_example_files_load() -> None:
         "unknown_field: 1\n",
         "commands:\n  allow:\n    git: {subcommands: [clone], extra: 1}\n",
         "commands:\n  deny_patterns: ['([unclosed']\n",
+        "commands:\n  deny_patterns: ['rm(?=x)']\n",  # lookahead: agents use RE2
+        "commands:\n  deny_patterns: ['(a)\\\\1']\n",  # backreference
+        "commands:\n  deny_patterns: ['(?i)rm']\n",  # inline flags
         "deny_paths: [relative/path]\n",
         "deny_paths: [/srv/../etc]\n",
         "network:\n  git_hosts: ['github.com/evil']\n",

@@ -1,0 +1,128 @@
+{
+  "allow": {
+    "curl": {
+      "flags_deny": [
+        "-o",
+        "--output",
+        "-T",
+        "--upload-file",
+        "-K",
+        "--config"
+      ],
+      "subcommands": null
+    },
+    "docker": {
+      "flags_deny": [],
+      "subcommands": [
+        "ps",
+        "logs",
+        "inspect",
+        "start",
+        "stop",
+        "restart",
+        "compose"
+      ]
+    },
+    "git": {
+      "flags_deny": [],
+      "subcommands": [
+        "clone",
+        "pull",
+        "fetch",
+        "checkout",
+        "status",
+        "log"
+      ]
+    },
+    "npm": {
+      "flags_deny": [],
+      "subcommands": [
+        "ci",
+        "install",
+        "test",
+        "run"
+      ]
+    }
+  },
+  "allowed_projects": [
+    "dev-*"
+  ],
+  "approvals": {
+    "passkey": false
+  },
+  "denied_containers": [
+    "prod-*",
+    "docker-socket-proxy"
+  ],
+  "deny_paths": [
+    "/etc",
+    "/root",
+    "/home",
+    "/var/lib/docker",
+    "/srv/prod"
+  ],
+  "deny_patterns": [
+    {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+    },
+    {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+    },
+    {
+      "group": null,
+      "source": "chmod\\s+777"
+    },
+    {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+    },
+    {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+    },
+    {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+    }
+  ],
+  "docker_socket": null,
+  "gatekeepers": {
+    "unanimous": false
+  },
+  "git_hosts": [
+    "github.com"
+  ],
+  "groups": [],
+  "http_check_hosts": [
+    "localhost",
+    "127.0.0.1",
+    "*.dev.lan"
+  ],
+  "limits": {
+    "output_cap_mb": {
+      "group": null,
+      "value": 1
+    },
+    "plan_max_steps": {
+      "group": null,
+      "value": 25
+    },
+    "step_timeout_s": {
+      "group": null,
+      "value": 600
+    }
+  },
+  "lockdown": false,
+  "read_only": {
+    "deny_paths": [],
+    "group": null,
+    "mode": "allowed"
+  },
+  "schema": 1,
+  "target": "dev2",
+  "workspace_roots": [
+    "/srv/dev"
+  ]
+}
