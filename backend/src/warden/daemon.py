@@ -2,7 +2,9 @@
 
 The admin socket lives in the Warden home (0700) with mode 0600, and every connection must come from the
 same Unix user (SO_PEERCRED). It can execute an approved plan, kill a run, run a read-only command, show
-agent status and drop a revoked agent. It can't approve, edit policy or change settings.
+agent status, drop a revoked agent, and re-read config after a human published policy with the CLI
+(`reload`, which pushes bundles that are already signed and stored). It can't approve, publish or edit policy,
+or change settings.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ import os
 import pwd
 import socket
 import struct
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -46,14 +49,11 @@ def _peer_uid(writer: asyncio.StreamWriter) -> int | None:
 
 
 class Daemon:
-    def __init__(self, home: Path, config: Config) -> None:
+    def __init__(self, home: Path, load: Callable[[], Config]) -> None:
         self.home = home
+        self._load = load
         self.engine = make_engine(home / "warden.db")
-        with Session(self.engine) as s:
-            version = bundles.published_version(s)
-        self.config = Config(
-            policy=config.policy, targets=config.targets, settings=config.settings, policy_version=version
-        )
+        self.config = self._fresh_config()
         approval = ApprovalKey.load(home / "keys/approval.key")
         online = OnlineKey.load(home / "keys/online.key")
         ca = CA.load_or_create(home / "ca")
@@ -67,6 +67,25 @@ class Daemon:
             online=online,
             config=lambda: self.config,
         )
+
+    def _fresh_config(self) -> Config:
+        cfg = self._load()
+        with Session(self.engine) as s:
+            version = bundles.published_version(s)
+        return Config(policy=cfg.policy, targets=cfg.targets, settings=cfg.settings, policy_version=version)
+
+    async def reload(self) -> dict[str, Any]:
+        """After a publish: re-read config, push the latest bundles, apply lockdown, re-check plans."""
+        self.config = self._fresh_config()
+        pushed, killed = await self.dispatcher.policy_changed()
+        invalidated = [p.id for p in self.plans.invalidate_against_current_policy()]
+        log.info("policy v%s: pushed to %s", self.config.policy_version, ", ".join(pushed) or "nobody")
+        return {
+            "version": self.config.policy_version,
+            "pushed": pushed,
+            "killed": killed,
+            "invalidated": invalidated,
+        }
 
     async def _expire_loop(self) -> None:
         while True:
@@ -129,6 +148,8 @@ class Daemon:
                 }
                 for name, s in self.dispatcher.sessions.items()
             }
+        if op == "reload":
+            return await self.reload()
         if op == "drop":
             await self.dispatcher.revoke(str(req["name"]))
             return {"dropped": req["name"]}

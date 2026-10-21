@@ -20,6 +20,7 @@ import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from pydantic import ValidationError
 from sqlmodel import Session
@@ -36,6 +37,8 @@ from warden.keys import OnlineKey
 from warden.plans.models import Plan, PlanStatus, ProposeRequest, StepEdit
 from warden.plans.service import Config, PlanService
 from warden.policy_dist import bundle as bundles
+from warden.policy_dist import offline_keys
+from warden.policy_dist import publish as publishing
 from warden.signing import ApprovalKey
 from warden.timeutil import fmt_datetime
 
@@ -67,10 +70,19 @@ class Home:
             raise ConfigError(f"{self.db} must not be accessible by group or others (chmod 600)")
 
     def config(self) -> Config:
+        # Lockdown is not part of the plan-checking config: proposals and approvals still work during a
+        # lockdown; the dispatcher holds plans and agents refuse them (README 7A Lockdown).
+        version = 0
+        if self.db.exists():
+            engine = make_engine(self.db)
+            with Session(engine) as s:
+                version = bundles.published_version(s)
+            engine.dispose()
         return Config(
             policy=load_policy(self.config_dir / "policy.yaml"),
             targets=load_targets(self.config_dir / "targets.yaml"),
             settings=load_settings(self.config_dir / "settings.yaml"),
+            policy_version=version,
         )
 
     def service(self) -> PlanService:
@@ -188,7 +200,25 @@ def build_parser() -> argparse.ArgumentParser:
     pc = polsub.add_parser("check", help="validate policy.yaml and targets.yaml")
     pc.add_argument("--policy")
     pc.add_argument("--targets")
-    polsub.add_parser("publish", help="sign and publish each target's first policy bundle")
+    polsub.add_parser("publish", help="publish policy.yaml: tightening now, loosening after the offline key")
+    pend = polsub.add_parser("pending", help="show the pending (loosening) publish")
+    pend.add_argument("--out", help="write the file to sign with warden-sign")
+    su = polsub.add_parser("sign-upload", help="publish the pending change with warden-sign's signature file")
+    su.add_argument("file")
+    polsub.add_parser("discard", help="drop the pending publish")
+    polsub.add_parser("status", help="published version, lockdown, pending publish and agent rollout")
+
+    keys = sub.add_parser("keys", help="offline policy keys")
+    ksub = keys.add_subparsers(dest="keys_cmd", required=True)
+    off = ksub.add_parser("offline")
+    osub = off.add_subparsers(dest="offline_cmd", required=True)
+    reg = osub.add_parser("register", help="register the public half of a warden-sign key")
+    reg.add_argument("--public", required=True)
+    reg.add_argument("--backup", action="store_true", help="register it as the backup key")
+    osub.add_parser("list")
+
+    ld = sub.add_parser("lockdown", help="stop everything: kill runs, hold approved plans, read-only only")
+    ld.add_argument("action", nargs="?", choices=["lift"], help="lift lockdown (needs the offline key)")
 
     ag = sub.add_parser("agent", help="enroll, confirm, list and revoke agents")
     agsub = ag.add_subparsers(dest="agent_cmd", required=True)
@@ -236,25 +266,159 @@ def _init(home: Home) -> None:
     _out(f"Warden home ready at {home.path}")
 
 
-def _publish(home: Home) -> int:
+def _notify_daemon(home: Home) -> dict[str, Any] | None:
+    """Tell a running `warden serve` to re-read config and push the latest bundles. It changes nothing."""
+    try:
+        return dict(admin_request(home.path, {"op": "reload"}, timeout=30))
+    except WardenError:
+        return None
+
+
+def _print_result(r: publishing.PublishResult) -> None:
+    if r.outcome == "unchanged":
+        _out(f"Nothing to publish: policy v{r.version} is current.")
+        return
+    if r.superseded:
+        _out(f"(pending v{r.superseded} superseded)")
+    for t in r.targets:
+        _out(f"  {t.target} · {t.cls}")
+        for c in t.changes:
+            _out(f"    {c.text()}")
+    if r.outcome == "published":
+        _out(f"Published v{r.version}.")
+        return
+    _out(
+        f"\nv{r.version} loosens {', '.join(r.loosens)}, so it needs the offline key. On your laptop:\n"
+        f"  warden policy pending --out bundle-v{r.version}.json   (here, then copy it over)\n"
+        f"  warden-sign sign bundle-v{r.version}.json --key ~/.warden/offline.key\n"
+        f"  warden policy sign-upload bundle-v{r.version}.sig.json   (here)"
+    )
+
+
+def _after_publish(home: Home, r: publishing.PublishResult) -> None:
+    if r.outcome != "published":
+        return
+    daemon = _notify_daemon(home)
+    for p in home.service().invalidate_against_current_policy():
+        _out(f"invalidated {p.id}: {p.invalid_reason}")
+    if daemon is None:
+        _out("Warden isn't running; agents get the new version when it starts and they connect.")
+    else:
+        _out(f"Pushed to {len(daemon['pushed'])} connected agent(s). Rollout: warden policy status")
+
+
+def _keys(home: Home) -> tuple[OnlineKey, ApprovalKey]:
     home.check_private()
-    cfg = home.config()
+    return OnlineKey.load(home.online_key), ApprovalKey.load(home.key)
+
+
+def _policy(home: Home, args: argparse.Namespace) -> int:
+    home.check_private()
     engine = make_engine(home.db)
-    with Session(engine) as s, s.begin():
-        published = bundles.publish_initial(
-            s,
+    now, actor = datetime.now(UTC), _human().label
+    cmd = args.policy_cmd
+    if cmd == "publish":
+        cfg = home.config()
+        online_key, approval = _keys(home)
+        r = publishing.publish(
+            engine,
             policy=cfg.policy,
             targets=cfg.targets,
-            online=OnlineKey.load(home.online_key),
-            approval=ApprovalKey.load(home.key),
-            now=datetime.now(UTC),
-            actor=_human().label,
+            online=online_key,
+            approval=approval,
+            now=now,
+            actor=actor,
         )
-    _out(
-        f"published v1 for {', '.join(published)}"
-        if published
-        else "nothing to publish: every target is current"
-    )
+        _print_result(r)
+        _after_publish(home, r)
+    elif cmd == "pending":
+        with Session(engine) as s:
+            row = publishing.open_pending(s)
+        if row is None:
+            _out("No pending publish.")
+            return 0
+        _out(f"pending v{row.version} · {row.reason} · by {row.created_by} at {row.created_at}")
+        for it in publishing.pending_items(row):
+            _out(f"  {it['target']} · {it['class']}")
+            for c in it["changes"]:
+                arrow = "↓" if c["effect"] == "tighten" else "↑"
+                _out(f"    {arrow} {c['path']} {c['op']} {c['detail']}")
+        if args.out:
+            body = json.dumps(publishing.publish_file(engine), indent=2, ensure_ascii=False)
+            Path(args.out).write_text(body + "\n", encoding="utf-8")
+            _out(f"wrote {args.out}; sign it with: warden-sign sign {args.out} --key ~/.warden/offline.key")
+    elif cmd == "sign-upload":
+        r = publishing.sign_upload(engine, Path(args.file).read_text(encoding="utf-8"), now=now, actor=actor)
+        _print_result(r)
+        _after_publish(home, r)
+    elif cmd == "discard":
+        _out(f"discarded pending v{publishing.discard(engine, now=now, actor=actor)}")
+    elif cmd == "status":
+        with Session(engine) as s:
+            version, lock = bundles.published_version(s), publishing.lockdown_state(s)
+            row = publishing.open_pending(s)
+        _out(f"policy v{version}" + (" · LOCKDOWN (read-only only)" if lock else ""))
+        if row is not None:
+            _out(f"pending v{row.version} ({row.reason}) waiting for the offline key since {row.created_at}")
+        try:
+            connected = admin_request(home.path, {"op": "status"}, timeout=10)
+        except WardenError:
+            connected = {}
+        for a in _registry(home).list():
+            if a.status != "active":
+                continue
+            pv = connected.get(a.name, {}).get("policy_version", a.policy_version)
+            mark = "✓" if pv >= version else "⏳"
+            where = "online" if a.name in connected else "offline"
+            _out(f"  {a.name:<12} {mark} v{pv}  {where}")
+    return 0
+
+
+def _offline_keys(home: Home, args: argparse.Namespace) -> int:
+    home.check_private()
+    engine = make_engine(home.db)
+    if args.offline_cmd == "register":
+        with Session(engine) as s, s.begin():
+            row = offline_keys.register(
+                s,
+                args.public,
+                role="backup" if args.backup else "primary",
+                actor=_human(),
+                now=datetime.now(UTC),
+            )
+            _out(f"registered {row.role} offline key {row.key_id}")
+        _out("Agents get it when they enroll. Agents enrolled before now must re-enroll to trust it.")
+    else:
+        with Session(engine) as s:
+            rows = offline_keys.active(s)
+        if not rows:
+            _out("No offline key registered: nothing can loosen policy.")
+        for r in rows:
+            _out(f"{r.role:<8} {r.key_id}  {r.public}  registered {r.created_at} by {r.created_by}")
+    return 0
+
+
+def _lockdown(home: Home, args: argparse.Namespace) -> int:
+    online, approval = _keys(home)
+    engine = make_engine(home.db)
+    now, actor = datetime.now(UTC), _human().label
+    if args.action == "lift":
+        r = publishing.lift(engine, online=online, approval=approval, now=now, actor=actor)
+        _print_result(r)
+        _out("Held plans start again once each agent has the lifted version.")
+        return 0
+    r = publishing.lockdown(engine, online=online, approval=approval, now=now, actor=actor)
+    svc = home.service()
+    for p in svc.list_plans(statuses=(PlanStatus.APPROVED,)):
+        svc.hold(p.id, "lockdown")
+        _out(f"held {p.id}")
+    daemon = _notify_daemon(home)
+    _out(f"LOCKDOWN · policy v{r.version} · only read-only commands run.")
+    if daemon is not None:
+        for pid in daemon["killed"]:
+            _out(f"killed {pid}")
+        _out(f"Pushed to {len(daemon['pushed'])} connected agent(s).")
+    _out("Lift with `warden lockdown lift` (needs the offline key).")
     return 0
 
 
@@ -344,14 +508,18 @@ def run(argv: Sequence[str]) -> int:
     if args.cmd == "init":
         _init(home)
         return 0
-    if args.cmd == "policy" and args.policy_cmd == "publish":
-        return _publish(home)
+    if args.cmd == "policy" and args.policy_cmd != "check":
+        return _policy(home, args)
+    if args.cmd == "keys":
+        return _offline_keys(home, args)
+    if args.cmd == "lockdown":
+        return _lockdown(home, args)
     if args.cmd == "agent":
         return _agent(home, args)
     if args.cmd == "serve":
         home.check_private()
         logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-        asyncio.run(Daemon(home.path, home.config()).run())
+        asyncio.run(Daemon(home.path, home.config).run())
         return 0
     if args.cmd in ("execute", "kill", "ro"):
         home.check_private()

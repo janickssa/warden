@@ -13,7 +13,9 @@ import warden.agents
 import warden.audit
 import warden.dispatch.outputs
 import warden.plans.store
-import warden.policy_dist.bundle  # noqa: F401  (registers tables)
+import warden.policy_dist.bundle
+import warden.policy_dist.offline_keys
+import warden.policy_dist.publish  # noqa: F401  (registers tables)
 
 _TRIGGERS = (
     "CREATE TRIGGER IF NOT EXISTS audit_no_update BEFORE UPDATE ON audit "

@@ -17,12 +17,12 @@ from policyhelp import FIXTURES, fixture_policy, fixture_targets
 from sqlalchemy import Engine
 from sqlmodel import Session
 
-from warden import audit
 from warden.keys import OnlineKey
 from warden.plans.canonical import canonical_bytes
 from warden.plans.hashing import plan_hash
 from warden.plans.models import Plan, PlanStatus, PolicyResult, Step, StepKind
 from warden.policy_dist import bundle as b
+from warden.policy_dist import publish
 from warden.signing import ApprovalKey, approval_payload
 
 
@@ -37,66 +37,21 @@ def keys(tmp_path: Path) -> tuple[OnlineKey, ApprovalKey]:
     return OnlineKey.generate(tmp_path / "online.key"), ApprovalKey.generate(tmp_path / "approval.key")
 
 
-def test_publish_initial_once(engine: Engine, keys: tuple[OnlineKey, ApprovalKey]) -> None:
+def test_published_policy_must_match_config(engine: Engine, keys: tuple[OnlineKey, ApprovalKey]) -> None:
     online, approval = keys
-    with Session(engine) as s, s.begin():
-        got = b.publish_initial(
-            s,
-            policy=fixture_policy(),
-            targets=fixture_targets(),
-            online=online,
-            approval=approval,
-            now=T0,
-            actor="cli:alice",
-        )
-    assert got == ["dev", "dev2", "sec-auth"]
-    with Session(engine) as s, s.begin():
-        assert (
-            b.publish_initial(
-                s,
-                policy=fixture_policy(),
-                targets=fixture_targets(),
-                online=online,
-                approval=approval,
-                now=T0,
-                actor="cli:alice",
-            )
-            == []
-        )
-        bundle = b.latest(s, "dev")
-        assert bundle is not None
-        assert bundle["version"] == 1
-        assert bundle["change"] == "initial"
-        assert b.published_version(s) == 1
-        assert [e.action for e in audit.entries(s)] == ["policy_publish"] * 3
-
-
-def test_changed_policy_refused_until_m3(engine: Engine, keys: tuple[OnlineKey, ApprovalKey]) -> None:
-    online, approval = keys
-    with Session(engine) as s, s.begin():
-        b.publish_initial(
-            s,
-            policy=fixture_policy(),
-            targets=fixture_targets(),
-            online=online,
-            approval=approval,
-            now=T0,
-            actor="cli:alice",
-        )
+    publish.publish(
+        engine,
+        policy=fixture_policy(),
+        targets=fixture_targets(),
+        online=online,
+        approval=approval,
+        now=T0,
+        actor="cli:alice",
+    )
     policy = fixture_policy()
     looser = policy.model_copy(update={"commands": policy.commands.model_copy(update={"deny_patterns": ()})})
-    with Session(engine) as s, s.begin(), pytest.raises(b.PolicyUnpublished):
-        b.publish_initial(
-            s,
-            policy=looser,
-            targets=fixture_targets(),
-            online=online,
-            approval=approval,
-            now=T0,
-            actor="cli:alice",
-        )
     with Session(engine) as s:
-        b.check_published(s, policy, fixture_targets(), "dev")
+        assert b.check_published(s, policy, fixture_targets(), "dev")["version"] == 1
         with pytest.raises(b.PolicyUnpublished):
             b.check_published(s, looser, fixture_targets(), "dev")
 

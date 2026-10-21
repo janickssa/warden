@@ -4,7 +4,8 @@ Agents connect out to wss://<warden>:8443 with mutual TLS. `/enroll` is the only
 connection without a client certificate; `/agent` requires a certificate issued by Warden's CA whose serial
 belongs to an active agent. Plans are sent only to an agent that is connected and on the latest bundle;
 otherwise they wait as `held` and start when the agent becomes current. A dropped connection fails the
-running plan with `agent_disconnected` at once.
+running plan with `agent_disconnected` at once. Bundles are pushed when an agent connects, when a heartbeat
+shows it behind, and right after a publish (`policy_changed`). During lockdown nothing is dispatched.
 """
 
 from __future__ import annotations
@@ -38,6 +39,8 @@ from warden.plans.service import Config, PlanService
 from warden.policy.effective import effective_rules
 from warden.policy.readonly import check_read_only
 from warden.policy_dist import bundle as bundles
+from warden.policy_dist import offline_keys
+from warden.policy_dist.publish import lockdown_state
 
 log = logging.getLogger("warden.dispatch")
 
@@ -63,6 +66,7 @@ class AgentSession:
     remote: str
     policy_version: int = 0
     agent_version: str = ""
+    offered_version: int = 0  # latest bundle version sent on this connection, so heartbeats don't resend it
     pending_ro: dict[str, asyncio.Future[protocol.ReadOnlyResult]] = field(default_factory=dict)
 
 
@@ -177,6 +181,7 @@ class Dispatcher:
             if row.status == "confirmed" and row.cert_pem and row.agent_id:
                 with Session(self._engine) as s:
                     bundle = bundles.latest(s, row.name)
+                    offline = offline_keys.refs(s)
                 if bundle is None:
                     await ws.send(
                         protocol.encode(
@@ -194,6 +199,7 @@ class Dispatcher:
                         trust={
                             "online_key_id": self._online.key_id,
                             "online_public": self._online.public_b64,
+                            "offline_keys": offline,
                         },
                         bundle=bundle,
                     )
@@ -269,11 +275,40 @@ class Dispatcher:
                 if not fut.done():
                     fut.set_exception(DispatchRefused("agent disconnected", code="agent_disconnected"))
 
-    async def _send_bundle_if_behind(self, sess: AgentSession) -> None:
+    async def _send_bundle_if_behind(self, sess: AgentSession) -> bool:
         with Session(self._engine) as s:
             bundle = bundles.latest(s, sess.agent.name)
-        if bundle is not None and int(bundle["version"]) > sess.policy_version:
+        if bundle is None:
+            return False
+        version = int(bundle["version"])
+        if version <= sess.policy_version or version <= sess.offered_version:
+            return False
+        sess.offered_version = version
+        try:
             await sess.ws.send(protocol.encode("bundle", bundle=bundle))
+        except ConnectionClosed:
+            return False
+        return True
+
+    def _locked(self) -> bool:
+        with Session(self._engine) as s:
+            return lockdown_state(s)
+
+    async def policy_changed(self) -> tuple[list[str], list[str]]:
+        """Called after a human published: push to every connected agent; under lockdown, kill runs."""
+        pushed = [
+            name for name, sess in list(self.sessions.items()) if await self._send_bundle_if_behind(sess)
+        ]
+        killed = []
+        if self._locked():
+            for plan_id in list(self.runs):
+                with contextlib.suppress(DispatchRefused, ConnectionClosed):
+                    await self.kill(plan_id, "warden:lockdown")
+                    killed.append(plan_id)
+        else:
+            for name in list(self.sessions):
+                self._spawn(self._release_held(name))
+        return pushed, killed
 
     def _latest_version(self, target: str) -> int:
         with Session(self._engine) as s:
@@ -288,6 +323,7 @@ class Dispatcher:
                 self._registry.seen(
                     sess.agent.id, version=msg.agent_version, policy_version=msg.policy_version
                 )
+                await self._send_bundle_if_behind(sess)
             case protocol.BundleAck():
                 sess.policy_version = msg.version
                 self._registry.seen(sess.agent.id, policy_version=msg.version)
@@ -412,6 +448,8 @@ class Dispatcher:
         except bundles.PolicyUnpublished as exc:
             self._audit("warden", "dispatch_refused", plan_id, code=exc.code, message=exc.message)
             raise DispatchRefused(exc.message, code=exc.code) from exc
+        if self._locked():
+            return self._plans.hold(plan_id, "lockdown")
         sess = self.sessions.get(plan.target)
         latest = self._latest_version(plan.target)
         if sess is None or sess.policy_version < latest:
@@ -465,7 +503,7 @@ class Dispatcher:
 
     async def _release_held(self, target: str) -> None:
         sess = self.sessions.get(target)
-        if sess is None or sess.policy_version < self._latest_version(target):
+        if sess is None or sess.policy_version < self._latest_version(target) or self._locked():
             return
         for plan in self._plans.list_plans(statuses=(PlanStatus.HELD,), oldest_first=True):
             if plan.target != target:

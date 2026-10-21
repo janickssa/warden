@@ -1,11 +1,9 @@
 """Signed, versioned policy bundles (README 7A, invariant 11).
 
 A bundle is the compiled rules for one target plus the approval keys agents trust, signed with the online
-key. Agents refuse unsigned, older, tampered, unknown-field or wrong-target bundles.
-
-M2 scope (PLAN.md): each target gets one initial bundle (version 1). Changing policy afterwards needs M3's
-publish flow (classifier + offline key), so until then `publish_initial` refuses to replace a bundle and
-the dispatcher refuses plans while central policy differs from what the agent enforces.
+key (and the offline key when it loosens). Agents refuse unsigned, older, tampered, unknown-field or
+wrong-target bundles. Publishing lives in `publish.py`; the dispatcher refuses plans while central policy
+differs from what the agent enforces.
 """
 
 from __future__ import annotations
@@ -17,7 +15,6 @@ from typing import Any
 
 from sqlmodel import Field, Session, SQLModel, col, select
 
-from warden import audit
 from warden.errors import WardenError
 from warden.keys import OnlineKey
 from warden.plans.canonical import canonical_bytes
@@ -88,11 +85,11 @@ def approval_key_refs(approval: ApprovalKey) -> list[dict[str, str]]:
     return [{"key_id": approval.key_id, "public": approval.public_b64}]
 
 
-def compiled_for(policy: Policy, targets: Targets, target: str) -> dict[str, Any]:
+def compiled_for(policy: Policy, targets: Targets, target: str, *, lockdown: bool = False) -> dict[str, Any]:
     t = targets.get(target)
     if t is None:
         raise WardenError(f"unknown target {target}", code="unknown_target")
-    return compile_rules(effective_rules(policy, t), t)
+    return compile_rules(effective_rules(policy, t, lockdown=lockdown), t)
 
 
 def latest(session: Session, target: str) -> dict[str, Any] | None:
@@ -110,68 +107,15 @@ def published_version(session: Session) -> int:
     return 0 if row is None else row.version
 
 
-def publish_initial(
-    session: Session,
-    *,
-    policy: Policy,
-    targets: Targets,
-    online: OnlineKey,
-    approval: ApprovalKey,
-    now: datetime,
-    actor: str,
-) -> list[str]:
-    """Create bundle v1 for every target that has none. Returns the targets published.
-
-    Refuses if an existing bundle differs from the current policy: changing published rules is M3.
-    """
-    published = []
-    keys = approval_key_refs(approval)
-    for t in targets.targets:
-        rules = compiled_for(policy, targets, t.name)
-        existing = latest(session, t.name)
-        if existing is not None:
-            if existing["rules"] != rules or existing["approval_keys"] != keys:
-                raise PolicyUnpublished(
-                    f"{t.name}: policy changed since bundle v{existing['version']}; publishing changes "
-                    "(tighten/loosen with the offline key) arrives in M3"
-                )
-            continue
-        bundle = sign_bundle(
-            build_bundle(
-                version=1, target=t.name, rules=rules, change="initial", approval_keys=keys, issued_at=now
-            ),
-            online,
-        )
-        digest = bundle_sha256(bundle)
-        session.add(
-            BundleRow(
-                target=t.name,
-                version=1,
-                sha256=digest,
-                body=canonical_bytes(bundle).decode(),
-                created_at=now.isoformat(),
-            )
-        )
-        audit.append(
-            session,
-            ts=now,
-            actor=actor,
-            action="policy_publish",
-            subject=f"{t.name} · v1 · initial",
-            detail={"target": t.name, "version": 1, "sha256": digest, "key_id": online.key_id},
-        )
-        published.append(t.name)
-    return published
-
-
 def check_published(session: Session, policy: Policy, targets: Targets, target: str) -> dict[str, Any]:
     """The bundle the agent enforces, if central policy still matches it; otherwise refuse."""
     bundle = latest(session, target)
     if bundle is None:
         raise PolicyUnpublished(f"no policy bundle for {target}; run `warden policy publish`")
-    if bundle["rules"] != compiled_for(policy, targets, target):
+    lockdown = bool(bundle["rules"].get("lockdown"))
+    if bundle["rules"] != compiled_for(policy, targets, target, lockdown=lockdown):
         raise PolicyUnpublished(
             f"policy.yaml no longer matches bundle v{bundle['version']} for {target}; plans can't run until "
-            "the change is published (M3)"
+            "the change is published (`warden policy publish`) or reverted"
         )
     return bundle
