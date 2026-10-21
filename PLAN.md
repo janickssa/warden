@@ -35,7 +35,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 |---|---|---|---|---|
 | M1 ☑ | Core | Plan store, state machine, canonical hashing, policy engine, read-only checker, audit chain, CLI approval | Plans propose, approve and validate locally | `tests/e2e/test_m1_local_flow.py` + documented CLI session in `docs/m1-demo.md` |
 | M2 ☑ | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
-| M3 | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_rollout.py` (5 agents, timed), plus classifier property tests |
+| M3 ◐ | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_rollout.py` (5 agents, timed), plus classifier property tests |
 | M4 | MCP | FastMCP tools (§6), Streamable HTTP + stdio, elicitation, MCP auth | Works end-to-end from Claude Code over WireGuard | MCP client test + manual Claude Code session in `docs/m4-demo.md` |
 | M5 | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
 | M6 | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | Playwright suite (states from §17.6 per page) + manual check over VPN |
@@ -393,17 +393,59 @@ Differences from the plan above:
 - Commit 8 (integration tests) landed together with the dispatcher in commit 6, so each part was proven
   against the real agent as it was built.
 
-## M3 Policy distribution — outline
+## M3 Policy distribution — detailed plan
 
-`policy_dist/`: compile per target (global + targets + groups + approver keys), classifier (field
-direction table; anything unknown → loosen; Hypothesis tests), bundle schema with
-`additionalProperties: false` on both sides, online-key signing, pending bundles for loosening,
-`warden-sign keygen|bundle|trust-offline` with passphrase-encrypted ed25519 key files (D-04; YubiKey later behind the signer interface), signature upload, version monotonicity, atomic
-swap + ack `{version, sha256}`, 60 s poll + push, rollout state, `held` for behind/offline agents, and
-`invalidated` re-checks on publish. Policy test suite gate before publish. Lockdown/lift. Tests: 5
-in-process Go agents (real binaries), timed tightening < 5 s; loosening without offline sig rejected by
-backend *and* by agent; older/equal version, unsigned, unknown field and wrong target rejected; groups
-can't widen (agent side too).
+**Goal (README 7A/7B):** policy changes reach agents as signed, versioned bundles. Tightening is signed with
+the online key and pushed at once; loosening waits for the offline key. Groups ride along inside the compiled
+rules. Lockdown, rollout tracking, invalidation and held plans complete the loop.
+
+### Key design point: the agent classifies for itself
+In M2 the agent trusted the bundle's own `change` label. A compromised Warden could label a loosening
+"tighten" and sign it with the online key. From M3 on, the **agent compares the new rules with the rules it
+has installed** and requires a valid offline signature unless the change is provably tighter. The label
+becomes informational. Warden and the agent run the same classifier, checked against shared vectors.
+
+### Classifier (default: loosen when unsure, section 16 rule 12)
+Per compiled target rules, every field compared as sets or numbers: deny lists may only grow, allow lists only
+shrink (a program's `subcommands: null` → list counts as tighter, list → null as looser), `flags_deny` only
+grow, limits only drop, read-only mode only move right, `passkey`/`unanimous`/`lockdown` only turn on,
+approval keys only shrink. Workspace roots may only shrink; `docker_socket` must not change. Anything else
+that differs → loosen.
+
+### Offline key (D-04, D-05)
+- `warden-sign` (Go): `keygen` (ed25519 seed encrypted with scrypt + XChaCha20-Poly1305, passphrase twice),
+  `pubkey`, and `sign <publish file>`. `sign` prints the per-target diff it computed itself, asks for
+  confirmation, and writes a signature file.
+- `warden keys offline register --public … [--backup]` on the warden guest. Agents receive the offline key(s)
+  at enrollment, inside the CA-pinned channel the human confirmed. Either key can sign. Agents enrolled
+  before a key existed must re-enroll to get it; replacing keys later is a Settings flow (M6).
+
+### Publish
+`warden policy publish` (runs inside `warden serve` via the admin socket, or locally if it isn't running):
+1. Reload config, compile every target, diff against the latest bundles.
+2. **Test gate:** schema load plus `policy-fixtures/must_deny.yaml` (attacks every policy must refuse, for
+   every target). Any failure blocks the publish.
+3. All targets tighten (or are new) → new global version, online-signed, stored, pushed to connected
+   agents, waiting/approved plans re-checked (`invalidated`), audit entry with the diff.
+4. Any target loosens → a **pending publish** with the version reserved and a file to sign
+   (`warden policy pending --out bundle-vN.json`). `warden-sign sign` → `warden policy sign-upload`
+   verifies every offline signature, then publishes as in 3. `warden policy discard` drops it.
+5. Agents also get the latest bundle when they connect and whenever a heartbeat shows they're behind.
+6. `warden policy status`: version, per-agent rollout (`✓ v43` / `⏳ v42`), pending publish.
+
+### Lockdown
+`warden lockdown` (CLI now, dashboard and iPhone later): publishes a tightening bundle with `lockdown: true`
+for every target, kills running plans, holds approved ones. Proposals and approvals still work; nothing
+runs. `warden lockdown lift` is a loosening publish (offline key). Held plans start again when it lands.
+
+### Tests
+- Classifier: unit and property tests in Python, shared vectors run by Go, agent refusing a mislabelled
+  loosening.
+- warden-sign: keygen/encrypt/decrypt, wrong passphrase, signature verifies in Python.
+- Publish: tighten immediate; loosen pending; bad or missing offline signature refused; test gate blocks;
+  plans invalidated; lockdown and lift; held plans released only after lift.
+- Integration (Done when): **5 real agents, a tightening reaches all of them in under 5 s**; a loosening sent
+  without the offline signature is refused by Warden *and* by every agent, even when mislabelled.
 
 ## M4 MCP — outline
 
