@@ -8,13 +8,17 @@ Approving requires typing the start of the plan hash shown by `warden plan show`
 from __future__ import annotations
 
 import argparse
+import asyncio
+import contextlib
 import getpass
 import json
+import logging
 import os
 import re
 import stat
 import sys
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -22,11 +26,16 @@ from sqlmodel import Session
 
 from warden import audit
 from warden.actors import ClaudeActor, HumanActor
+from warden.agents import Registry
+from warden.ca import CA
 from warden.config import load_policy, load_settings, load_targets
+from warden.daemon import Daemon, admin_request
 from warden.db import make_engine
 from warden.errors import ConfigError, WardenError
+from warden.keys import OnlineKey
 from warden.plans.models import Plan, PlanStatus, ProposeRequest, StepEdit
 from warden.plans.service import Config, PlanService
+from warden.policy_dist import bundle as bundles
 from warden.signing import ApprovalKey
 from warden.timeutil import fmt_datetime
 
@@ -42,6 +51,7 @@ class Home:
         self.config_dir = config_dir or path / "config"
         self.db = path / "warden.db"
         self.key = path / "keys" / "approval.key"
+        self.online_key = path / "keys" / "online.key"
 
     def check_private(self) -> None:
         for p in (self.path, self.path / "keys"):
@@ -178,6 +188,30 @@ def build_parser() -> argparse.ArgumentParser:
     pc = polsub.add_parser("check", help="validate policy.yaml and targets.yaml")
     pc.add_argument("--policy")
     pc.add_argument("--targets")
+    polsub.add_parser("publish", help="sign and publish each target's first policy bundle")
+
+    ag = sub.add_parser("agent", help="enroll, confirm, list and revoke agents")
+    agsub = ag.add_subparsers(dest="agent_cmd", required=True)
+    aa = agsub.add_parser("add", help="create a one-time enrollment token (15 min)")
+    aa.add_argument("name")
+    agsub.add_parser("pending", help="agents waiting for fingerprint confirmation")
+    ac = agsub.add_parser("confirm", help="confirm an agent after comparing fingerprints")
+    ac.add_argument("name")
+    ac.add_argument("--fingerprint", required=True)
+    ar = agsub.add_parser("revoke")
+    ar.add_argument("name")
+    agsub.add_parser("list")
+
+    sub.add_parser("serve", help="run the agent listener and admin socket")
+    ex2 = sub.add_parser(
+        "execute", help="send an approved plan to its agent (Claude uses execute_plan from M4)"
+    )
+    ex2.add_argument("plan_id")
+    k = sub.add_parser("kill", help="kill switch for a running plan")
+    k.add_argument("plan_id")
+    ro = sub.add_parser("ro", help="run one read-only command on a target")
+    ro.add_argument("target")
+    ro.add_argument("command")
     return ap
 
 
@@ -191,10 +225,116 @@ def _init(home: Home) -> None:
     if not home.key.exists():
         key = ApprovalKey.generate(home.key)
         _out(f"approval key created: {key.key_id}")
+    if not home.online_key.exists():
+        online = OnlineKey.generate(home.online_key)
+        _out(f"online policy key created: {online.key_id}")
+    ca = CA.load_or_create(home.path / "ca")
+    _out(f"internal CA: sha256 {ca.fingerprint[:32]}…")
     engine = make_engine(home.db)
     os.chmod(home.db, 0o600)
     engine.dispose()
     _out(f"Warden home ready at {home.path}")
+
+
+def _publish(home: Home) -> int:
+    home.check_private()
+    cfg = home.config()
+    engine = make_engine(home.db)
+    with Session(engine) as s, s.begin():
+        published = bundles.publish_initial(
+            s,
+            policy=cfg.policy,
+            targets=cfg.targets,
+            online=OnlineKey.load(home.online_key),
+            approval=ApprovalKey.load(home.key),
+            now=datetime.now(UTC),
+            actor=_human().label,
+        )
+    _out(
+        f"published v1 for {', '.join(published)}"
+        if published
+        else "nothing to publish: every target is current"
+    )
+    return 0
+
+
+def _registry(home: Home) -> Registry:
+    home.check_private()
+    cfg = home.config()
+    return Registry(make_engine(home.db), CA.load_or_create(home.path / "ca"), targets=lambda: cfg.targets)
+
+
+def _agent(home: Home, args: argparse.Namespace) -> int:
+    reg = _registry(home)
+    cfg = home.config()
+    if args.agent_cmd == "add":
+        token = reg.create_token(args.name, _human())
+        listener = cfg.settings.agents
+        server = f"wss://{listener.server_names[0]}:{listener.listen_port}"
+        _out(f"One-time token for {args.name} (valid 15 min):\n  {token}\n")
+        _out(
+            f"On {args.name}, as the warden user:\n  warden-agent enroll --server {server} --token {token}\n"
+        )
+        _out("Then compare the fingerprint it prints with `warden agent pending` and confirm it.")
+    elif args.agent_cmd == "pending":
+        rows = reg.pending()
+        if not rows:
+            _out("No agents waiting.")
+        for r in rows:
+            _out(
+                f"{r.name}  {r.fingerprint}  from {r.source_ip}  agent {r.agent_version}  expires "
+                f"{fmt_datetime(datetime.fromisoformat(r.expires_at))}"
+            )
+    elif args.agent_cmd == "confirm":
+        a = reg.confirm(args.name, args.fingerprint, _human())
+        _out(f"enrolled {a.name} · {a.id} · {a.fingerprint}")
+    elif args.agent_cmd == "revoke":
+        a = reg.revoke(args.name, _human())
+        # If Warden isn't running, the revoked certificate is refused on its next connection anyway.
+        with contextlib.suppress(WardenError):
+            admin_request(home.path, {"op": "drop", "name": args.name}, timeout=10)
+        _out(f"revoked {a.name} · {a.id}")
+    elif args.agent_cmd == "list":
+        try:
+            online = admin_request(home.path, {"op": "status"}, timeout=10)
+        except WardenError:
+            online = {}
+        for a in reg.list():
+            state = (
+                "● online" if a.name in online else ("✕ revoked" if a.status == "revoked" else "■ offline")
+            )
+            pv = online.get(a.name, {}).get("policy_version", a.policy_version)
+            _out(f"{a.name:<12} {state:<10} {a.id}  policy v{pv}  agent {a.agent_version}  {a.fingerprint}")
+    return 0
+
+
+def _admin(home: Home, args: argparse.Namespace) -> int:
+    if args.cmd == "execute":
+        r = admin_request(home.path, {"op": "execute", "plan_id": args.plan_id})
+        extra = (
+            f" at step {r['failed_at']} ({r['fail_reason']})"
+            if r["failed_at"]
+            else f" · {r['held_reason']}"
+            if r["held_reason"]
+            else ""
+        )
+        _out(f"{r['plan_id']} {r['status']}{extra}")
+        return 0 if r["status"] in ("succeeded", "held") else 1
+    if args.cmd == "kill":
+        admin_request(home.path, {"op": "kill", "plan_id": args.plan_id}, timeout=30)
+        _out(f"kill switch sent for {args.plan_id}")
+        return 0
+    r = admin_request(
+        home.path, {"op": "read_only", "target": args.target, "command": args.command}, timeout=60
+    )
+    if not r["ok"]:
+        for v in r["refused"]:
+            _out(f"refused · {v['code']} · {v['message']}")
+        return 1
+    sys.stdout.write(r["output"])
+    if r["truncated"]:
+        _out("⋯ output truncated at 1 MB")
+    return 0 if r["exit_code"] == 0 else 1
 
 
 def run(argv: Sequence[str]) -> int:
@@ -204,6 +344,18 @@ def run(argv: Sequence[str]) -> int:
     if args.cmd == "init":
         _init(home)
         return 0
+    if args.cmd == "policy" and args.policy_cmd == "publish":
+        return _publish(home)
+    if args.cmd == "agent":
+        return _agent(home, args)
+    if args.cmd == "serve":
+        home.check_private()
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+        asyncio.run(Daemon(home.path, home.config()).run())
+        return 0
+    if args.cmd in ("execute", "kill", "ro"):
+        home.check_private()
+        return _admin(home, args)
     if args.cmd == "policy":
         policy = load_policy(Path(args.policy) if args.policy else home.config_dir / "policy.yaml")
         targets = load_targets(Path(args.targets) if args.targets else home.config_dir / "targets.yaml")
