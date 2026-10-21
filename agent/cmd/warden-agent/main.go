@@ -82,6 +82,9 @@ func main() {
 		if err != nil {
 			home = dir.Path
 		}
+		if err := os.MkdirAll(home, 0o700); err != nil {
+			log.Fatalf("can't create HOME %s: %v", home, err)
+		}
 		a := &conn.Agent{Dir: dir, Cfg: cfg, Version: Version, Home: home}
 		if err := a.LoadBundle(); err != nil {
 			log.Fatal(err)

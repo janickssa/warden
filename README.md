@@ -79,7 +79,8 @@ flowchart TB
 Use the **Proxmox firewall** so that:
 
 - `ai:11434` accepts only from `warden`.
-- Targets need **no inbound ports** for Warden. Agents connect out to `warden:8443`; allow that only from target guests.
+- Targets need **no inbound ports** for Warden. Agents connect out to `warden:8443`; allow that only from enrolled agents (LAN addresses or the WireGuard subnet).
+- Agents connect to `warden:8443` **directly, never through NPM**: mutual TLS needs the client certificate end to end. Agents outside the Proxmox host (another local server, a remote box) use the same port over the LAN or WireGuard, or an NPM *Stream* (raw TCP passthrough), never an NPM proxy host.
 - `warden` is reachable only from NPM.
 
 ### Targets and agents
@@ -299,11 +300,12 @@ A small Go binary (single static file, low tens of MB RAM) running as user `ward
 - **Connects outbound** to `wss://warden.lan:8443/agent` with mutual TLS. No inbound ports, works behind NAT.
 - **Before every step** it verifies: the plan hash, Warden's approval signature on that hash, the step against its local policy bundle, and every path argument resolved locally (`realpath`, symlinks followed) inside `workspace_roots`. Any failure → refuses and reports `policy_violation`.
 - **Executes** argv directly (no shell), with timeout, output cap and working-directory jail. Docker calls go through the local socket proxy.
-- **Streams** output and status back, sends a heartbeat every 15 s with agent version, policy version, disk and load.
+- **Streams** output and status back, sends a heartbeat every 15 s with agent version, policy version, disk and load. Warden stores output per step and writes each step's SHA-256 into the hash-chained audit log.
+- **Runs one plan at a time**, refuses to run as root, and keeps a durable log of plan IDs it has started, so an approval can never run twice.
 - **Fails closed:** if the connection to Warden drops mid-plan, it finishes or kills the current step (per its timeout) and aborts the rest. The plan becomes `failed` with reason `agent_disconnected`.
 - **Baseline rules compiled into the binary** that no policy can override: e.g. never `rm -rf /`, never write to `/etc`, `/usr`, `/boot`, never `--privileged`, never mount `/`, never touch the agent's own binary, config or keys.
 
-**Enrollment:** dashboard → *Add agent* (name, kind, workspace root) → one-time token (valid 15 min) → `warden-agent enroll` on the target. The agent generates its own ed25519 key and prints its fingerprint; the dashboard shows the fingerprint it received from the connecting IP. You compare them and click *Fingerprints match · enroll*, after which it gets a client certificate from Warden's internal CA. A mismatch aborts enrollment and is logged. **Revoke** from the dashboard: certificate is revoked and the connection dropped immediately.
+**Enrollment:** dashboard → *Add agent* (or `warden agent add <name>`; the name must be in `targets.yaml`) → one-time token (valid 15 min) that also carries the fingerprint of Warden's internal CA, so the agent can pin it → `warden-agent enroll --server wss://<warden>:8443 --token …` on the target. The agent generates its own ed25519 key and prints its fingerprint; the dashboard shows the fingerprint it received from the connecting IP. You compare them and click *Fingerprints match · enroll* (or `warden agent confirm <name> --fingerprint …`), after which it gets a client certificate from Warden's internal CA, the online policy key and its first policy bundle. A mismatch aborts enrollment and is logged. **Revoke** from the dashboard: certificate is revoked and the connection dropped immediately.
 
 ### Policy bundles
 
@@ -570,17 +572,19 @@ warden/
 │   │   ├── plans/             # models, store, hashing, diff, state machine
 │   │   ├── policy/            # parser, argv matcher, path checks
 │   │   ├── gatekeeper/        # panel, providers/, prompt, schema
-│   │   ├── dispatch/          # plan signing, agent connections, output streams
+│   │   ├── dispatch/          # agent listener (mTLS), protocol, runs, output store
 │   │   ├── policy_dist/       # compile, classify, sign, publish, rollout
-│   │   ├── agents.py          # enrollment, CA, registry, revocation
+│   │   ├── agents.py          # enrollment, registry, revocation
+│   │   ├── ca.py              # internal CA for agent mTLS
+│   │   ├── daemon.py          # `warden serve` + admin socket for the CLI
 │   │   ├── scheduler.py
 │   │   ├── events.py
 │   │   └── audit.py
 │   └── tests/
 ├── agent/                     # Go: warden-agent + warden-sign
 │   ├── cmd/warden-agent/
-│   ├── cmd/warden-sign/
-│   ├── internal/              # conn, policy, exec, docker, baseline, update
+│   ├── cmd/warden-sign/       # M3
+│   ├── internal/              # canonical, policy, bundle, approval, runner, conn, enroll, state
 │   └── go.mod
 ├── web/                       # Next.js dashboard
 │   ├── app/
@@ -590,7 +594,7 @@ warden/
 │   ├── warden-backend.service
 │   ├── warden-web.service
 │   ├── warden-agent.service
-│   └── target/compose.yml     # docker-socket-proxy (unix socket)
+│   └── target/                # socket proxy (compose.yml + haproxy.cfg), tmpfiles.d entry
 ├── design/
 │   ├── nocturne/              # design system: styles.css, readme.md, theme.json
 │   ├── prototypes/            # Warden Dashboard v2, Warden iPhone v2 (+ mock data JS)
@@ -607,11 +611,13 @@ warden/
 
 ```bash
 sudo useradd -r -m -s /usr/sbin/nologin warden
-sudo mkdir -p /srv/dev && sudo chown warden: /srv/dev
-docker compose -f deploy/target/compose.yml up -d   # socket proxy on a unix socket
-sudo install -m 0755 warden-agent /usr/local/bin/
-sudo -u warden warden-agent enroll --server https://warden.lan:8443 --token <from dashboard>
-sudo systemctl enable --now warden-agent
+sudo install -d -o warden -g warden /srv/dev
+sudo install -d -o warden -g warden -m 0700 /var/lib/warden-agent
+sudo cp deploy/target/warden-tmpfiles.conf /etc/tmpfiles.d/warden.conf && sudo systemd-tmpfiles --create
+WARDEN_GID=$(id -g warden) docker compose -f deploy/target/compose.yml up -d   # socket proxy on a unix socket
+sudo install -m 0755 warden-agent /usr/local/bin/      # built with: cd agent && CGO_ENABLED=0 go build ./cmd/warden-agent
+sudo -u warden warden-agent enroll --state /var/lib/warden-agent --server wss://<warden>:8443 --token <from warden agent add>
+sudo cp deploy/warden-agent.service /etc/systemd/system/ && sudo systemctl enable --now warden-agent
 ```
 
 ### Signing keys (once, on your laptop)
@@ -632,6 +638,8 @@ ollama pull qwen2.5:14b-instruct   # pick size from the VRAM table
 
 ```bash
 cd backend && uv sync
+warden init && warden policy publish        # keys, internal CA, first policy bundle
+warden agent add dev                        # then `warden agent confirm dev --fingerprint …`
 cd ../web && pnpm install && pnpm build
 sudo cp ../deploy/*.service /etc/systemd/system/
 sudo systemctl enable --now warden-backend warden-web

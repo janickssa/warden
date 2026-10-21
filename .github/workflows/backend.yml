@@ -18,3 +18,8 @@ jobs:
       - run: uv run ruff format --check src tests
       - run: uv run mypy src tests
       - run: uv run pytest
+      # Integration tests start the real agent as an unprivileged user, so they need Go and root.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - run: sudo --preserve-env=PATH "$(command -v uv)" run pytest tests/integration

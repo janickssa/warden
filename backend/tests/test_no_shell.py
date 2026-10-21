@@ -51,7 +51,7 @@ def test_no_shell_execution(path: Path) -> None:
 
 
 def _text_files() -> list[Path]:
-    exts = {".py", ".yaml", ".yml", ".json", ".toml", ".md"}
+    exts = {".py", ".yaml", ".yml", ".json", ".toml", ".md", ".go", ".cfg", ".service", ".conf"}
     skip = {".venv", ".git", "node_modules", ".mypy_cache", ".ruff_cache", ".pytest_cache", "prototypes"}
     return sorted(p for p in ROOT.rglob("*") if p.suffix in exts and p.is_file() and not skip & set(p.parts))
 
@@ -61,6 +61,8 @@ def test_no_invisible_or_bidi_characters_in_repo() -> None:
     for path in _text_files():
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for ch in line:
+                if ch == "\t" and path.suffix == ".go":
+                    continue  # gofmt indents with tabs
                 cat = unicodedata.category(ch)
                 if cat in ("Cc", "Cf", "Zl", "Zp", "Co") or (cat == "Zs" and ch != " "):
                     bad.append(f"{path.relative_to(ROOT)}:{lineno}: U+{ord(ch):04X}")

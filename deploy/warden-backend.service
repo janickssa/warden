@@ -1,0 +1,37 @@
+# Warden backend on the warden guest: agent listener (:8443) and admin socket (README 12).
+# M4 adds MCP and the API to the same process.
+[Unit]
+Description=Warden backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=warden
+Group=warden
+Environment=WARDEN_HOME=/var/lib/warden
+Environment=WARDEN_CONFIG=/etc/warden
+ExecStart=/opt/warden/backend/.venv/bin/warden serve
+Restart=always
+RestartSec=5
+
+StateDirectory=warden
+StateDirectoryMode=0700
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

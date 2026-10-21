@@ -1,0 +1,26 @@
+# Docker socket proxy for a target (README 2, 12). The agent never touches /var/run/docker.sock: it talks
+# to this proxy on a unix socket only the warden group can open, and the proxy refuses the Docker API
+# sections Warden doesn't need (exec, swarm, plugins, secrets, system, ...).
+#
+#   export WARDEN_GID=$(id -g warden)
+#   sudo cp warden-tmpfiles.conf /etc/tmpfiles.d/warden.conf && sudo systemd-tmpfiles --create
+#   docker compose -f compose.yml up -d
+#
+# Note: the proxy can't read request bodies, so it can't stop a privileged container or a bind mount of /.
+# Those are refused by the agent's policy and baseline before any docker command runs (DECISIONS M2-07).
+name: warden-target
+services:
+  docker-proxy:
+    image: haproxy:2.9-alpine
+    user: "0"
+    restart: unless-stopped
+    read_only: true
+    network_mode: none
+    environment:
+      WARDEN_GID: ${WARDEN_GID:?set WARDEN_GID to the warden group id}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /run/warden:/run/warden
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    tmpfs:
+      - /tmp

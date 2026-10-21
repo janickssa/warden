@@ -34,7 +34,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 | # | Milestone | Main deliverables | Done when (README §15) | Proven by |
 |---|---|---|---|---|
 | M1 ☑ | Core | Plan store, state machine, canonical hashing, policy engine, read-only checker, audit chain, CLI approval | Plans propose, approve and validate locally | `tests/e2e/test_m1_local_flow.py` + documented CLI session in `docs/m1-demo.md` |
-| M2 ◐ | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
+| M2 ☑ | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
 | M3 | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_rollout.py` (5 agents, timed), plus classifier property tests |
 | M4 | MCP | FastMCP tools (§6), Streamable HTTP + stdio, elicitation, MCP auth | Works end-to-end from Claude Code over WireGuard | MCP client test + manual Claude Code session in `docs/m4-demo.md` |
 | M5 | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
@@ -379,6 +379,19 @@ Proven by the integration tests here, plus the manual run on your `dev` server f
 7. `feat(daemon): warden serve, admin socket and CLI commands`
 8. `test: agent integration suite`
 9. `docs/deploy: systemd units, socket proxy, M2 checklist, README/DECISIONS`
+
+### M2 result ☑ (21.10.2026)
+
+Done-when "plan runs on `dev`, fails and revises; a tampered plan is refused" is proven by
+`backend/tests/integration/` (the real agent binary as an unprivileged user, 11 scenarios plus a full
+CLI + `warden serve` dry run) and is ready for the manual run on your server with `docs/m2-demo.md`.
+Python: 812 tests; Go: canonical, policy (275 shared cases + symlinks), bundle, approval, runner and state
+tests, all passing with `-race`. Decisions: DECISIONS.md section B3 (M2-01 … M2-12) and corrected D-10.
+
+Differences from the plan above:
+- `warden-sign` moved to M3, where the offline key is first needed.
+- Commit 8 (integration tests) landed together with the dispatcher in commit 6, so each part was proven
+  against the real agent as it was built.
 
 ## M3 Policy distribution — outline
 
