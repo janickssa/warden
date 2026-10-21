@@ -305,7 +305,7 @@ A small Go binary (single static file, low tens of MB RAM) running as user `ward
 - **Fails closed:** if the connection to Warden drops mid-plan, it finishes or kills the current step (per its timeout) and aborts the rest. The plan becomes `failed` with reason `agent_disconnected`.
 - **Baseline rules compiled into the binary** that no policy can override: e.g. never `rm -rf /`, never write to `/etc`, `/usr`, `/boot`, never `--privileged`, never mount `/`, never touch the agent's own binary, config or keys.
 
-**Enrollment:** dashboard → *Add agent* (or `warden agent add <name>`; the name must be in `targets.yaml`) → one-time token (valid 15 min) that also carries the fingerprint of Warden's internal CA, so the agent can pin it → `warden-agent enroll --server wss://<warden>:8443 --token …` on the target. The agent generates its own ed25519 key and prints its fingerprint; the dashboard shows the fingerprint it received from the connecting IP. You compare them and click *Fingerprints match · enroll* (or `warden agent confirm <name> --fingerprint …`), after which it gets a client certificate from Warden's internal CA, the online policy key and its first policy bundle. A mismatch aborts enrollment and is logged. **Revoke** from the dashboard: certificate is revoked and the connection dropped immediately.
+**Enrollment:** dashboard → *Add agent* (or `warden agent add <name>`; the name must be in `targets.yaml`) → one-time token (valid 15 min) that also carries the fingerprint of Warden's internal CA, so the agent can pin it → `warden-agent enroll --server wss://<warden>:8443 --token …` on the target. The agent generates its own ed25519 key and prints its fingerprint; the dashboard shows the fingerprint it received from the connecting IP. You compare them and click *Fingerprints match · enroll* (or `warden agent confirm <name> --fingerprint …`), after which it gets a client certificate from Warden's internal CA, the online policy key, the offline public key(s) and the current policy bundle. It prints the offline key IDs it trusts so you can compare them with `warden-sign pubkey`. A mismatch aborts enrollment and is logged. **Revoke** from the dashboard: certificate is revoked and the connection dropped immediately.
 
 ### Policy bundles
 
@@ -333,7 +333,7 @@ An agent accepts a bundle only if: the signatures are valid for its change class
 1. Edit the rule on the dashboard **Policy** page, or edit `policy.yaml` and run `warden policy publish`.
 2. Warden validates it, shows a diff with one row per changed path (e.g. `groups.high-security.members`, `add`, `tighten`), classifies the whole change as **tighten** or **loosen**, and runs the policy test suite (schema checks such as invalid regexes, plus adversarial fixtures) against the new rules. Publishing is blocked while any test fails.
 3. You confirm with your passkey.
-4. **Tighten:** signed with the online key and pushed to every connected agent immediately (target: under 5 s). Offline agents get it when they reconnect; agents also check for a newer version on connect and every 60 s.
+4. **Tighten:** signed with the online key and pushed to every connected agent immediately (target: under 5 s). Offline agents get it when they reconnect; Warden also pushes it whenever a heartbeat (every 15 s) shows an agent behind.
 5. **Rollout view:** the dashboard shows each agent as `✓ v42` or `⏳ v41`.
 6. **Enforcement:**
    - The dispatcher won't send plans to an agent that isn't on the latest version.
@@ -347,11 +347,11 @@ An agent accepts a bundle only if: the signatures are valid for its change class
 | **Online key** | `warden` guest | Only changes proven to tighten: adding deny patterns, deny paths or denied containers; removing allowed commands, subcommands, flags or hosts; lowering limits |
 | **Offline key** | YubiKey or your laptop, never on a server | Anything that loosens, or that the classifier can't prove is tightening |
 
-This makes the urgent case (closing a hole) instant and automatic, while a compromised Warden still can't quietly open things up. Loosening flow: `warden policy publish` creates a pending bundle → sign it locally with `warden-sign bundle-v43.json` → upload the signature in the dashboard → it's published.
+This makes the urgent case (closing a hole) instant and automatic, while a compromised Warden still can't quietly open things up. Loosening flow: `warden policy publish` creates a pending publish → `warden policy pending --out bundle-v43.json` → sign it on your laptop with `warden-sign sign bundle-v43.json --key ~/.warden/offline.key` (it recomputes and shows the diff itself) → upload the signature (`warden policy sign-upload bundle-v43.sig.json`, or the dashboard from M6) → it's published. **Agents classify every bundle themselves** against the rules they have installed, so a loosening labelled "tighten" is still refused without the offline signature.
 
 ### Lockdown
 
-One action in the dashboard, iPhone app or CLI (`warden lockdown`): kills running plans, puts every approved plan on `held`, and publishes a tightening bundle that allows only read-only commands on every agent. Lifting lockdown restores the previous rules as a new version, which counts as loosening and needs the offline key.
+One action in the dashboard, iPhone app or CLI (`warden lockdown`): kills running plans, puts every approved plan on `held`, and publishes a tightening bundle that allows only read-only commands on every agent. Lifting lockdown (`warden lockdown lift`) restores the current rules without lockdown as a new version, which counts as loosening and needs the offline key. Proposals and approvals keep working during lockdown; plans wait as `held` and start once each agent has the lifted version.
 
 ### Agent self-updates (later)
 
@@ -623,8 +623,11 @@ sudo cp deploy/warden-agent.service /etc/systemd/system/ && sudo systemctl enabl
 ### Signing keys (once, on your laptop)
 
 ```bash
-warden-sign keygen --out ~/.warden/offline.key   # or --yubikey
-# upload the PUBLIC key in the dashboard; it's baked into every policy bundle check
+warden-sign keygen --out ~/.warden/offline.key          # passphrase-encrypted; YubiKey support later
+warden-sign keygen --out /media/usb/offline-backup.key   # backup key on another device
+# then on the warden guest, before enrolling agents (agents pin these at enrollment):
+warden keys offline register --public <public from keygen>
+warden keys offline register --public <backup public> --backup
 ```
 
 ### On the `ai` VM

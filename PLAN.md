@@ -35,7 +35,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 |---|---|---|---|---|
 | M1 ☑ | Core | Plan store, state machine, canonical hashing, policy engine, read-only checker, audit chain, CLI approval | Plans propose, approve and validate locally | `tests/e2e/test_m1_local_flow.py` + documented CLI session in `docs/m1-demo.md` |
 | M2 ☑ | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
-| M3 ◐ | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_rollout.py` (5 agents, timed), plus classifier property tests |
+| M3 ☑ | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_policy_distribution.py` (5 agents, timed) and `test_cli_daemon.py::test_m3_dry_run`, plus classifier property tests; manual run in `docs/m3-demo.md` |
 | M4 | MCP | FastMCP tools (§6), Streamable HTTP + stdio, elicitation, MCP auth | Works end-to-end from Claude Code over WireGuard | MCP client test + manual Claude Code session in `docs/m4-demo.md` |
 | M5 | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
 | M6 | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | Playwright suite (states from §17.6 per page) + manual check over VPN |
@@ -446,6 +446,23 @@ runs. `warden lockdown lift` is a loosening publish (offline key). Held plans st
   plans invalidated; lockdown and lift; held plans released only after lift.
 - Integration (Done when): **5 real agents, a tightening reaches all of them in under 5 s**; a loosening sent
   without the offline signature is refused by Warden *and* by every agent, even when mislabelled.
+
+### M3 result ☑ (21.10.2026)
+
+Done-when "tightening reaches all agents in < 5 s; loosening without the offline key is rejected" is proven
+by `backend/tests/integration/test_policy_distribution.py` with real agent binaries running as an
+unprivileged user: 5 agents receive and acknowledge a tightening within the 5 s the test allows; a loosening is held by
+Warden until a registered offline key signs it, and the same loosening labelled "tighten" and signed with the
+online key is refused by every agent (`needs_offline_signature`). The real `warden-sign` binary signs end to
+end, and `test_cli_daemon.py::test_m3_dry_run` runs the whole CLI flow, including lockdown and lift.
+Python: 859 unit tests + 16 integration tests; Go: all packages pass with `-race`. Decisions: DECISIONS.md
+section B4 (M3-01 … M3-12). Manual checklist: `docs/m3-demo.md`.
+
+Differences from the plan above:
+- Publishing runs in the CLI, and `warden serve` only got a `reload` op that pushes what was already signed
+  (M3-09), so the admin socket still can't change policy.
+- The test gate file ships inside the backend package (M3-08).
+- Agents enrolling after v1 accept the current version (M3-06).
 
 ## M4 MCP — outline
 

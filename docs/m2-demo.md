@@ -29,7 +29,7 @@ cd /opt/warden/backend && sudo uv sync --locked   # root-owned, read-only for th
 alias warden='sudo -u warden WARDEN_HOME=/var/lib/warden WARDEN_CONFIG=/etc/warden /opt/warden/backend/.venv/bin/warden'
 
 warden init                # ✓ approval key, online policy key and internal CA created
-warden policy publish      # ✓ "published v1 for dev, dev2"
+warden policy publish      # ✓ "dev · initial", "dev2 · initial", "Published v1."
 sudo cp /opt/warden/deploy/warden-backend.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now warden-backend
 journalctl -u warden-backend -n 5   # ✓ "agent listener on :8443, admin socket …, policy v1"
