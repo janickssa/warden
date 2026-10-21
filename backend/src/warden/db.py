@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import Engine, event
 from sqlmodel import SQLModel, create_engine
 
+import warden.agents
 import warden.audit
 import warden.plans.store
 import warden.policy_dist.bundle  # noqa: F401  (registers tables)
