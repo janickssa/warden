@@ -1,0 +1,347 @@
+{
+  "bundle_v1": {
+    "approval_keys": [
+      {
+        "key_id": "ed25519:24f6ed6acbfe1009",
+        "public": "Kay64UG8yvCyLhqU000LxzYeUm0L_hLIl5S8kyKWbdc"
+      }
+    ],
+    "change": "initial",
+    "issued_at": "2026-10-20T12:00:00+00:00",
+    "min_agent_version": "0.1.0",
+    "rules": {
+      "allow": {
+        "curl": {
+          "flags_deny": [
+            "-o",
+            "--output",
+            "-T",
+            "--upload-file",
+            "-K",
+            "--config"
+          ],
+          "subcommands": null
+        },
+        "docker": {
+          "flags_deny": [],
+          "subcommands": [
+            "ps",
+            "logs",
+            "inspect",
+            "start",
+            "stop",
+            "restart",
+            "compose"
+          ]
+        },
+        "git": {
+          "flags_deny": [],
+          "subcommands": [
+            "clone",
+            "pull",
+            "fetch",
+            "checkout",
+            "status",
+            "log"
+          ]
+        },
+        "npm": {
+          "flags_deny": [],
+          "subcommands": [
+            "ci",
+            "install",
+            "test",
+            "run"
+          ]
+        }
+      },
+      "allowed_projects": [
+        "dev-*"
+      ],
+      "approvals": {
+        "passkey": false
+      },
+      "denied_containers": [
+        "prod-*",
+        "docker-socket-proxy"
+      ],
+      "deny_paths": [
+        "/etc",
+        "/root",
+        "/home",
+        "/var/lib/docker",
+        "/srv/prod"
+      ],
+      "deny_patterns": [
+        {
+          "group": null,
+          "source": "rm\\s+-rf\\s+/"
+        },
+        {
+          "group": null,
+          "source": "curl .*\\|\\s*(ba)?sh"
+        },
+        {
+          "group": null,
+          "source": "chmod\\s+777"
+        },
+        {
+          "group": null,
+          "source": "docker\\s+run\\s+.*--privileged"
+        },
+        {
+          "group": null,
+          "source": "docker\\s+run\\s+.*-v\\s+/:"
+        },
+        {
+          "group": null,
+          "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+        }
+      ],
+      "docker_socket": null,
+      "gatekeepers": {
+        "unanimous": false
+      },
+      "git_hosts": [
+        "github.com"
+      ],
+      "groups": [],
+      "http_check_hosts": [
+        "localhost",
+        "127.0.0.1",
+        "*.dev.lan"
+      ],
+      "limits": {
+        "output_cap_mb": {
+          "group": null,
+          "value": 1
+        },
+        "plan_max_steps": {
+          "group": null,
+          "value": 25
+        },
+        "step_timeout_s": {
+          "group": null,
+          "value": 600
+        }
+      },
+      "lockdown": false,
+      "read_only": {
+        "deny_paths": [],
+        "group": null,
+        "mode": "allowed"
+      },
+      "schema": 1,
+      "target": "dev",
+      "workspace_roots": [
+        "/srv/dev"
+      ]
+    },
+    "schema": 1,
+    "signatures": [
+      {
+        "alg": "ed25519",
+        "key": "online",
+        "key_id": "ed25519:56475aa75463474c",
+        "sig": "ed25519:fuludjywx37QWb72pmKPEcTzF_S9Y9NvV1Vnsts3_CbMYhMVqjVQsk_qjIS8sqKp_goJayTcF_lPo_GUs93xBA"
+      }
+    ],
+    "target": "dev",
+    "version": 1
+  },
+  "bundle_v2_tighten": {
+    "approval_keys": [
+      {
+        "key_id": "ed25519:24f6ed6acbfe1009",
+        "public": "Kay64UG8yvCyLhqU000LxzYeUm0L_hLIl5S8kyKWbdc"
+      }
+    ],
+    "change": "tighten",
+    "issued_at": "2026-10-20T13:00:00+00:00",
+    "min_agent_version": "0.1.0",
+    "rules": {
+      "allow": {
+        "curl": {
+          "flags_deny": [
+            "-o",
+            "--output",
+            "-T",
+            "--upload-file",
+            "-K",
+            "--config"
+          ],
+          "subcommands": null
+        },
+        "docker": {
+          "flags_deny": [],
+          "subcommands": [
+            "ps",
+            "logs",
+            "inspect",
+            "start",
+            "stop",
+            "restart",
+            "compose"
+          ]
+        },
+        "git": {
+          "flags_deny": [],
+          "subcommands": [
+            "clone",
+            "pull",
+            "fetch",
+            "checkout",
+            "status",
+            "log"
+          ]
+        },
+        "npm": {
+          "flags_deny": [],
+          "subcommands": [
+            "ci",
+            "install",
+            "test",
+            "run"
+          ]
+        }
+      },
+      "allowed_projects": [
+        "dev-*"
+      ],
+      "approvals": {
+        "passkey": false
+      },
+      "denied_containers": [
+        "prod-*",
+        "docker-socket-proxy"
+      ],
+      "deny_paths": [
+        "/etc",
+        "/root",
+        "/home",
+        "/var/lib/docker",
+        "/srv/prod"
+      ],
+      "deny_patterns": [
+        {
+          "group": null,
+          "source": "rm\\s+-rf\\s+/"
+        },
+        {
+          "group": null,
+          "source": "curl .*\\|\\s*(ba)?sh"
+        },
+        {
+          "group": null,
+          "source": "chmod\\s+777"
+        },
+        {
+          "group": null,
+          "source": "docker\\s+run\\s+.*--privileged"
+        },
+        {
+          "group": null,
+          "source": "docker\\s+run\\s+.*-v\\s+/:"
+        },
+        {
+          "group": null,
+          "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+        }
+      ],
+      "docker_socket": null,
+      "gatekeepers": {
+        "unanimous": false
+      },
+      "git_hosts": [
+        "github.com"
+      ],
+      "groups": [],
+      "http_check_hosts": [
+        "localhost",
+        "127.0.0.1",
+        "*.dev.lan"
+      ],
+      "limits": {
+        "output_cap_mb": {
+          "group": null,
+          "value": 1
+        },
+        "plan_max_steps": {
+          "group": null,
+          "value": 25
+        },
+        "step_timeout_s": {
+          "group": null,
+          "value": 600
+        }
+      },
+      "lockdown": false,
+      "read_only": {
+        "deny_paths": [],
+        "group": null,
+        "mode": "allowed"
+      },
+      "schema": 1,
+      "target": "dev",
+      "workspace_roots": [
+        "/srv/dev"
+      ]
+    },
+    "schema": 1,
+    "signatures": [
+      {
+        "alg": "ed25519",
+        "key": "online",
+        "key_id": "ed25519:56475aa75463474c",
+        "sig": "ed25519:nYDZ6LclRBR6YMLR7KVepku59Bq90v0p6GsYTWbltDoNzXWB_vvFxoIlXWmaGAEidzDgAYPe8qtKw0Yflf8WDg"
+      }
+    ],
+    "target": "dev",
+    "version": 2
+  },
+  "online_key_id": "ed25519:56475aa75463474c",
+  "online_public": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+  "run": {
+    "approval": {
+      "at": "2026-10-20T12:00:00+00:00",
+      "by": "cli:alice",
+      "expires_at": "2026-10-20T12:30:00+00:00",
+      "hash": "sha256:09d0078368c00a828378de6a6d48693e2477df49ee0a90b3ebdfbe050dbe832b",
+      "signature": {
+        "by": "warden-approval-key",
+        "key_id": "ed25519:24f6ed6acbfe1009",
+        "sig": "ed25519:ssLzEfwgU2jSrsmiqWSXa2MB3K5Nz-Ebn7P0xPyD2TuAisFMd2WKwASjW4_e0V7KX7p0T-fnfeu5oIF-o-OzCg"
+      }
+    },
+    "plan_hash": "sha256:09d0078368c00a828378de6a6d48693e2477df49ee0a90b3ebdfbe050dbe832b",
+    "template": {
+      "goal": "Install and test",
+      "plan_id": "pln_01JB7Q3K0000000000000000AA",
+      "revises": null,
+      "steps": [
+        {
+          "captures": {},
+          "command": "npm ci",
+          "cwd": "/srv/dev/myapp",
+          "expect_exit": 0,
+          "kind": "shell",
+          "n": 1,
+          "purpose": "Install",
+          "timeout_s": 300
+        },
+        {
+          "captures": {},
+          "command": "npm test",
+          "cwd": "/srv/dev/myapp",
+          "expect_exit": 0,
+          "kind": "shell",
+          "n": 2,
+          "purpose": "Test",
+          "timeout_s": 300
+        }
+      ],
+      "target": "dev",
+      "v": 1
+    }
+  }
+}

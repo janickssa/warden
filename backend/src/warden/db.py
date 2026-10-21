@@ -10,7 +10,8 @@ from sqlalchemy import Engine, event
 from sqlmodel import SQLModel, create_engine
 
 import warden.audit
-import warden.plans.store  # noqa: F401  (registers the plans table)
+import warden.plans.store
+import warden.policy_dist.bundle  # noqa: F401  (registers tables)
 
 _TRIGGERS = (
     "CREATE TRIGGER IF NOT EXISTS audit_no_update BEFORE UPDATE ON audit "
