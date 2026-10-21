@@ -107,6 +107,10 @@ class PlanService:
         self._clock = clock
         self._resolver = resolver or LexicalResolver()
 
+    @property
+    def resolver(self) -> PathResolver:
+        return self._resolver
+
     # --- helpers ---------------------------------------------------------------------------------------
 
     def _now(self) -> datetime:

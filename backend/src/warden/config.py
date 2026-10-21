@@ -73,12 +73,22 @@ class ServerSettings(BaseModel):
     public_url: str = "https://warden.example.dk"
 
 
+class AgentListenerSettings(BaseModel):
+    """Where agents connect (directly, never through NPM: DECISIONS D-20)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    listen_host: str = "0.0.0.0"  # noqa: S104 - the agent port is firewalled to enrolled agents (README 2)
+    listen_port: Annotated[int, Field(ge=1, le=65535)] = 8443
+    server_names: tuple[str, ...] = ("warden.lan",)  # names/IPs agents use; they go into the server cert
+
+
 class Settings(BaseModel):
     """Human-only settings. Claude can neither read nor change these (README 17.3)."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
     server: ServerSettings = ServerSettings()
     approvals: ApprovalSettings = ApprovalSettings()
+    agents: AgentListenerSettings = AgentListenerSettings()
 
 
 def parse_settings(text: str, *, source: str = "settings.yaml") -> Settings:

@@ -6,3 +6,9 @@ approvals:
   passkey_medium: false
   chat: true
   chat_max_steps: 10
+agents:
+  # Agents connect here directly, not through NPM (mTLS needs the client certificate end to end).
+  listen_host: 0.0.0.0
+  listen_port: 8443
+  # Every name or IP agents use to reach Warden (LAN name, IP, WireGuard address). Goes into the server cert.
+  server_names: [warden.lan, 10.0.20.5]
