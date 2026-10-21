@@ -34,7 +34,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 | # | Milestone | Main deliverables | Done when (README §15) | Proven by |
 |---|---|---|---|---|
 | M1 ☑ | Core | Plan store, state machine, canonical hashing, policy engine, read-only checker, audit chain, CLI approval | Plans propose, approve and validate locally | `tests/e2e/test_m1_local_flow.py` + documented CLI session in `docs/m1-demo.md` |
-| M2 | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
+| M2 ◐ | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
 | M3 | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_rollout.py` (5 agents, timed), plus classifier property tests |
 | M4 | MCP | FastMCP tools (§6), Streamable HTTP + stdio, elicitation, MCP auth | Works end-to-end from Claude Code over WireGuard | MCP client test + manual Claude Code session in `docs/m4-demo.md` |
 | M5 | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
@@ -274,17 +274,111 @@ Differences from the plan above:
   dispatcher. Nothing executes commands in M1.
 - CI: `.github/workflows/backend.yml` runs the same checks on every push.
 
-## M2 Agent — outline (detailed before starting)
+## M2 Agent — detailed plan
 
-Go module `agent/` with `cmd/warden-agent`, `cmd/warden-sign` (keygen only in M2), and `internal/{conn,
-policy, exec, docker, baseline, enroll}`. Backend: `agents.py` (registry, internal CA via `cryptography`,
-one-time 15-min tokens, fingerprint confirmation) and `dispatch/` (WSS on :8443 with mTLS, signed envelope,
-output streaming, heartbeats every 15 s, kill = SIGTERM, then SIGKILL after 10 s, process-group kill,
-`agent_disconnected` handling, replay protection: the agent keeps a persistent log of executed
-plan IDs). The agent re-runs the shared fixture corpus in `go test`. Tests: tampered hash, unsigned or
-invalid approval, replayed plan, wrong target, baseline violations, symlink escapes with real `realpath`,
-output cap at 1 MB (truncated, step continues, exit code still counts), timeout and kill. Agents connect directly to the warden guest, not through NPM (D-20). Done-when demo
-on `dev` in `docs/m2-demo.md`.
+**Goal:** a small Go agent on each target that connects out over mTLS, receives approved plans, checks
+everything again on its own (hash, approval signature, target, its signed policy bundle, real `realpath`,
+baseline) and runs argv without a shell. Warden gains an internal CA, agent enrollment, a dispatcher, and a
+`warden serve` daemon that the CLI talks to through a private admin socket.
+
+### Scope boundary with M3
+
+M3 owns policy *changes*: the tighten/loosen classifier, the offline key and `warden-sign`, rollout, lockdown,
+held/invalidated automation. M2 needs a policy on the agent from day one, so it builds the **bundle format
+and its verification**, and publishes exactly one bundle per target (version 1, signed with the online key).
+If `policy.yaml` later compiles to different rules than the published bundle, the dispatcher refuses with
+`policy_unpublished` until M3's publish flow exists. That way M2 never lets the online key loosen anything
+(invariant 11).
+
+### Files
+
+```
+agent/                                   # Go module (go 1.24), deps: github.com/coder/websocket, yaml.v3 (tests)
+├── cmd/warden-agent/main.go             # enroll | run | version
+├── internal/canonical/                  # canonical JSON + plan hash (shared vectors)
+├── internal/policy/                     # lexer, paths (real realpath), matcher, baseline, readonly, engine
+├── internal/bundle/                     # strict decode, signature, version/target checks, atomic store
+├── internal/approval/                   # approval payload + signature verification
+├── internal/runner/                     # plan checks, exec (no shell), timeout, output cap, kill, captures
+├── internal/state/                      # state dir layout, executed-plan log (fsync'd)
+├── internal/conn/                       # mTLS WebSocket client, protocol, heartbeat, reconnect
+└── internal/enroll/                     # key generation, CA-pinned enrollment
+backend/src/warden/
+├── ca.py                                # internal CA (ed25519): server + client certs, serials, revocation
+├── agents.py                            # registry, one-time tokens, fingerprint confirm, revoke
+├── keys.py                              # online policy key (ed25519, 0600)
+├── policy_dist/compile.py               # EffectiveRules -> bundle rules JSON (also feeds Go fixtures)
+├── policy_dist/bundle.py                # build, sign, store; initial publish only in M2
+├── dispatch/protocol.py                 # message models (strict, shared with Go)
+├── dispatch/server.py                   # WSS :8443, /enroll and /agent, sessions, runs, output store
+├── daemon.py                            # `warden serve`: dispatcher + admin unix socket (0600)
+└── cli.py                               # + serve, agent add/pending/confirm/revoke/list, execute, kill, ro,
+                                         #   policy publish
+policy-fixtures/compiled/*.json          # compiled rules per fixture target, so Go runs the same corpus
+deploy/warden-agent.service, deploy/warden-backend.service, deploy/target/compose.yml (socket proxy)
+docs/m2-demo.md                          # manual checklist for the run on your `dev` server
+```
+
+### Protocol (JSON text frames over WSS, every message `{type, ...}`, unknown fields refused both ways)
+
+Warden → agent: `bundle`, `run {template, plan_hash, approval}`, `kill {plan_id}`, `read_only {id, command}`.
+Agent → Warden: `hello {agent_id, version, policy_version}`, `heartbeat` (every 15 s: versions, disk, load),
+`refused {plan_id, code, message}`, `step_started`, `output {plan_id, n, stream, data, truncated}`,
+`step_finished {plan_id, n, exit_code, timed_out, refused, killed, duration_ms, truncated}`,
+`run_finished`, `bundle_ack {version, sha256}`, `bundle_rejected`, `read_only_result`.
+
+### Enrollment
+
+`warden agent add dev` (name must exist in targets.yaml) prints a one-time token valid 15 min:
+`wdn_enr_<random>.<CA fingerprint>`. On the target: `warden-agent enroll --server wss://<warden>:8443
+--token …`. The agent makes its ed25519 key, pins Warden's CA by the fingerprint in the token, sends its
+public key and prints its fingerprint. `warden agent pending` shows the fingerprint Warden received and the
+source IP; `warden agent confirm dev --fingerprint SHA256:…` must match exactly. The agent then receives its
+client certificate, the CA, the online public key and bundle v1. Mismatch, expiry or reuse aborts and is
+audited. `warden agent revoke dev` revokes the certificate serial and drops the connection at once.
+
+### Agent checks before every step (README 7A)
+
+1. Plan: canonical hash of the template == `plan_hash` == `approval.hash`; `target` == the agent's own name
+   (from its signed bundle); approval signature valid for an approval key listed in the bundle; not expired;
+   plan ID not in the executed log (written and fsync'd before step 1).
+2. Step: lexer + matcher + baseline against the bundle's rules, paths resolved with real `realpath`;
+   placeholders substituted (captured values type-checked) and the substituted argv checked again;
+   `{{secret:…}}` refused until a secret store exists.
+3. Exec: resolved program from a fixed PATH, `exec` with argv, `cwd`, a minimal environment, own process
+   group, timeout (SIGTERM, then SIGKILL after 10 s), output capped at `output_cap_mb` (the step keeps
+   running; the exit code still counts). Any check failing → `policy_violation` (exit 126 in the UI),
+   remaining steps skipped.
+4. The agent refuses to run as root.
+5. Connection lost mid-plan: the current step may finish within its own timeout, then the rest is aborted.
+   Warden marks the plan `failed` / `agent_disconnected` as soon as the connection drops.
+
+### Tests
+
+- Go: canonical vectors; the shared corpus (276 cases) against `policy-fixtures/compiled/*.json`; real
+  symlink cases; bundle refusals (unsigned, wrong key, older/equal version, unknown field, wrong target,
+  loosen without offline signature, min_agent_version); approval refusals (wrong hash, bad signature, unknown
+  key, expired, other target, replay); exec (exit codes, timeout, kill, output cap, process group,
+  captures, minimal env, no shell).
+- Python: CA/cert issuance, token lifecycle (expiry, reuse, fingerprint mismatch), revocation, bundle
+  compile/sign, protocol model strictness, dispatcher with a fake agent.
+- Integration (Python starts the real Go binary as an unprivileged user): enroll → run succeeds → run fails
+  at step 2 and a revision runs → tampered `run` message refused by the agent → kill → disconnect →
+  revoked agent can't reconnect → read-only command.
+
+### Done when (README 15): plan runs on `dev`, fails and revises; a tampered plan is refused
+Proven by the integration tests here, plus the manual run on your `dev` server following `docs/m2-demo.md`.
+
+### Commit sequence
+1. `feat(agent): Go module, canonical JSON and plan hash`
+2. `feat(policy): compiled rules export` + `feat(agent): policy engine port passing the shared corpus`
+3. `feat(bundle): bundle build/sign (Python) and verify/store (Go)`
+4. `feat(agent): approval verification and runner`
+5. `feat(agents): internal CA, registry and enrollment`
+6. `feat(dispatch): WSS server, protocol, agent connection`
+7. `feat(daemon): warden serve, admin socket and CLI commands`
+8. `test: agent integration suite`
+9. `docs/deploy: systemd units, socket proxy, M2 checklist, README/DECISIONS`
 
 ## M3 Policy distribution — outline
 
