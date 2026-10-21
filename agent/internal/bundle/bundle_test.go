@@ -55,11 +55,18 @@ func clone(t *testing.T, m map[string]any) map[string]any {
 	return out
 }
 
-func opts(installed int) Options {
-	return Options{InstalledVersion: installed, OwnTarget: "dev", AgentVersion: "0.1.0"}
+func mustCanonical(t *testing.T, v map[string]any) []byte {
+	t.Helper()
+	generic, err := canonical.Decode(encode(t, v))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := canonical.Marshal(generic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
 }
-
-func trust(v vectors) Trust { return Trust{OnlineKeyID: v.OnlineKeyID, OnlinePublic: v.OnlinePublic} }
 
 func expectCode(t *testing.T, err error, code string) {
 	t.Helper()
@@ -69,45 +76,60 @@ func expectCode(t *testing.T, err error, code string) {
 	}
 }
 
-func TestPythonSignedBundleVerifies(t *testing.T) {
+func enrollOpts() Options { return Options{OwnTarget: "dev", AgentVersion: "0.1.0"} }
+
+func after(cur *Verified) Options {
+	return Options{Current: cur, OwnTarget: "dev", AgentVersion: "0.1.0"}
+}
+
+// --- Python-signed vectors -------------------------------------------------------------------------
+
+func TestPythonSignedBundlesVerify(t *testing.T) {
 	v := loadVectors(t)
-	got, err := Verify(encode(t, v.BundleV1), trust(v), opts(0))
+	tr := Trust{OnlineKeyID: v.OnlineKeyID, OnlinePublic: v.OnlinePublic}
+	v1, err := Verify(encode(t, v.BundleV1), tr, enrollOpts())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Bundle.Version != 1 || got.Rules.Target != "dev" || len(got.ApprovalKeys) != 1 {
-		t.Fatalf("unexpected bundle %+v", got.Bundle)
+	if v1.Bundle.Version != 1 || v1.Rules.Target != "dev" || len(v1.ApprovalKeys) != 1 || v1.Class != "initial" {
+		t.Fatalf("unexpected bundle %+v", v1.Bundle)
 	}
-	if _, err := Verify(encode(t, v.BundleV2), trust(v), opts(1)); err != nil {
+	v2, err := Verify(encode(t, v.BundleV2), tr, after(v1))
+	if err != nil {
 		t.Fatal(err)
+	}
+	if v2.Class != "none" {
+		t.Fatalf("same rules should classify as none, got %s", v2.Class)
 	}
 }
 
 func TestRefusals(t *testing.T) {
 	v := loadVectors(t)
-	tr := trust(v)
+	tr := Trust{OnlineKeyID: v.OnlineKeyID, OnlinePublic: v.OnlinePublic}
+	v1, err := Verify(encode(t, v.BundleV1), tr, enrollOpts())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	unsigned := clone(t, v.BundleV1)
 	unsigned["signatures"] = []any{}
-	_, err := Verify(encode(t, unsigned), tr, opts(0))
+	_, err = Verify(encode(t, unsigned), tr, enrollOpts())
 	expectCode(t, err, "unsigned")
 
 	tampered := clone(t, v.BundleV1)
 	tampered["rules"].(map[string]any)["deny_paths"] = []any{}
-	_, err = Verify(encode(t, tampered), tr, opts(0))
+	_, err = Verify(encode(t, tampered), tr, enrollOpts())
 	expectCode(t, err, "bad_signature")
 
 	extra := clone(t, v.BundleV1)
 	extra["surprise"] = true
-	_, err = Verify(encode(t, extra), tr, opts(0))
+	_, err = Verify(encode(t, extra), tr, enrollOpts())
 	expectCode(t, err, "unknown_field")
 
 	_, err = Verify(encode(t, v.BundleV1), tr, Options{OwnTarget: "dev2", AgentVersion: "0.1.0"})
 	expectCode(t, err, "wrong_target")
 
-	_, err = Verify(encode(t, v.BundleV1), tr, opts(1)) // same version again
-	expectCode(t, err, "old_version")
-	_, err = Verify(encode(t, v.BundleV2), tr, opts(5)) // older than installed
+	_, err = Verify(encode(t, v.BundleV1), tr, after(v1)) // same version again
 	expectCode(t, err, "old_version")
 
 	_, err = Verify(encode(t, v.BundleV1), tr, Options{OwnTarget: "dev", AgentVersion: "0.0.9"})
@@ -115,47 +137,159 @@ func TestRefusals(t *testing.T) {
 
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	other := Trust{OnlineKeyID: v.OnlineKeyID, OnlinePublic: base64.RawURLEncoding.EncodeToString(pub)}
-	_, err = Verify(encode(t, v.BundleV1), other, opts(0))
+	_, err = Verify(encode(t, v.BundleV1), other, enrollOpts())
 	expectCode(t, err, "bad_signature")
 
 	dup := bytes.Replace(encode(t, v.BundleV1), []byte(`"schema":1`), []byte(`"schema":1,"schema":1`), 1)
-	_, err = Verify(dup, tr, opts(0))
+	_, err = Verify(dup, tr, enrollOpts())
 	expectCode(t, err, "bad_bundle")
-}
 
-func TestInitialOnlyAtEnrollment(t *testing.T) {
-	v := loadVectors(t)
-	b := clone(t, v.BundleV1)
-	b["version"] = 7 // signature now invalid too, but the sequencing check comes first
-	_, err := Verify(encode(t, b), trust(v), opts(3))
+	_, err = Verify(encode(t, v.BundleV2), tr, enrollOpts()) // non-initial at enrollment
 	expectCode(t, err, "bad_change")
 }
 
-// A loosening bundle signed only by the online key (the only key a compromised Warden has) is refused.
-func TestLoosenNeedsOfflineKey(t *testing.T) {
-	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
-	tr := Trust{OnlineKeyID: "ed25519:test", OnlinePublic: base64.RawURLEncoding.EncodeToString(pub)}
-	v := loadVectors(t)
-	b := clone(t, v.BundleV2)
-	b["change"] = "loosen"
-	delete(b, "signatures")
-	body := mustCanonical(t, b)
-	sig := ed25519.Sign(priv, append([]byte(domain), body...))
-	b["signatures"] = []any{map[string]any{"key": "online", "key_id": "ed25519:test", "alg": "ed25519",
-		"sig": "ed25519:" + base64.RawURLEncoding.EncodeToString(sig)}}
-	_, err := Verify(encode(t, b), tr, opts(1))
-	expectCode(t, err, "needs_offline_signature")
+// --- Bundles signed here, to exercise tighten/loosen -----------------------------------------------
 
-	// Same bundle as "tighten" is accepted, proving the signature itself is fine.
-	b2 := clone(t, b)
-	b2["change"] = "tighten"
-	delete(b2, "signatures")
-	sig2 := ed25519.Sign(priv, append([]byte(domain), mustCanonical(t, b2)...))
-	b2["signatures"] = []any{map[string]any{"key": "online", "key_id": "ed25519:test", "alg": "ed25519",
-		"sig": "ed25519:" + base64.RawURLEncoding.EncodeToString(sig2)}}
-	if _, err := Verify(encode(t, b2), tr, opts(1)); err != nil {
+type signer struct {
+	t       *testing.T
+	online  ed25519.PrivateKey
+	offline ed25519.PrivateKey
+	backup  ed25519.PrivateKey
+	trust   Trust
+	base    map[string]any // the Python v1 bundle content, unsigned
+}
+
+func newSigner(t *testing.T) *signer {
+	v := loadVectors(t)
+	pubOn, privOn, _ := ed25519.GenerateKey(rand.Reader)
+	pubOff, privOff, _ := ed25519.GenerateKey(rand.Reader)
+	pubBk, privBk, _ := ed25519.GenerateKey(rand.Reader)
+	b64 := base64.RawURLEncoding.EncodeToString
+	base := clone(t, v.BundleV1)
+	delete(base, "signatures")
+	return &signer{t: t, online: privOn, offline: privOff, backup: privBk, base: base, trust: Trust{
+		OnlineKeyID: "ed25519:on", OnlinePublic: b64(pubOn),
+		OfflineKeys: []KeyRef{{KeyID: "ed25519:off", Public: b64(pubOff)}, {KeyID: "ed25519:bk", Public: b64(pubBk)}},
+	}}
+}
+
+// make builds a bundle: edit changes the rules, extra signers are "offline" or "backup".
+func (s *signer) make(version int, change string, edit func(rules map[string]any), extra ...string) []byte {
+	b := clone(s.t, s.base)
+	b["version"] = version
+	b["change"] = change
+	if edit != nil {
+		edit(b["rules"].(map[string]any))
+	}
+	msg := append([]byte(domain), mustCanonical(s.t, b)...)
+	sign := func(key, id string, priv ed25519.PrivateKey) map[string]any {
+		return map[string]any{"key": key, "key_id": id, "alg": "ed25519",
+			"sig": "ed25519:" + base64.RawURLEncoding.EncodeToString(ed25519.Sign(priv, msg))}
+	}
+	sigs := []any{sign("online", "ed25519:on", s.online)}
+	for _, e := range extra {
+		switch e {
+		case "offline":
+			sigs = append(sigs, sign("offline", "ed25519:off", s.offline))
+		case "backup":
+			sigs = append(sigs, sign("offline", "ed25519:bk", s.backup))
+		case "stranger":
+			_, p, _ := ed25519.GenerateKey(rand.Reader)
+			sigs = append(sigs, sign("offline", "ed25519:off", p))
+		}
+	}
+	b["signatures"] = sigs
+	return encode(s.t, b)
+}
+
+func (s *signer) enrolled() *Verified {
+	v1, err := Verify(s.make(1, "initial", nil), s.trust, enrollOpts())
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	return v1
+}
+
+func removeEtc(r map[string]any) {
+	r["deny_paths"] = []any{"/root", "/home", "/var/lib/docker", "/srv/prod"}
+}
+func addDeny(r map[string]any) {
+	r["deny_paths"] = append(r["deny_paths"].([]any), "/srv/dev/secret")
+}
+
+func TestTighteningNeedsOnlyTheOnlineKey(t *testing.T) {
+	s := newSigner(t)
+	got, err := Verify(s.make(2, "tighten", addDeny), s.trust, after(s.enrolled()))
+	if err != nil {
 		t.Fatal(err)
 	}
+	if got.Class != "tighten" {
+		t.Fatalf("class %s", got.Class)
+	}
+}
+
+// A compromised Warden labels a loosening as "tighten" and signs it with the online key only.
+func TestMislabelledLooseningRefused(t *testing.T) {
+	s := newSigner(t)
+	_, err := Verify(s.make(2, "tighten", removeEtc), s.trust, after(s.enrolled()))
+	expectCode(t, err, "needs_offline_signature")
+	addProgram := func(r map[string]any) {
+		r["allow"].(map[string]any)["rm"] = map[string]any{"subcommands": nil, "flags_deny": []any{}}
+	}
+	_, err = Verify(s.make(2, "tighten", addProgram), s.trust, after(s.enrolled()))
+	expectCode(t, err, "needs_offline_signature")
+	liftLockdown := func(r map[string]any) { r["lockdown"] = false }
+	locked := func(r map[string]any) { r["lockdown"] = true }
+	cur, err := Verify(s.make(2, "tighten", locked), s.trust, after(s.enrolled()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Verify(s.make(3, "tighten", liftLockdown), s.trust, after(cur))
+	expectCode(t, err, "needs_offline_signature")
+}
+
+func TestLooseningWithOfflineSignatureAccepted(t *testing.T) {
+	s := newSigner(t)
+	got, err := Verify(s.make(2, "loosen", removeEtc, "offline"), s.trust, after(s.enrolled()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Class != "loosen" {
+		t.Fatalf("class %s", got.Class)
+	}
+	if _, err := Verify(s.make(2, "loosen", removeEtc, "backup"), s.trust, after(s.enrolled())); err != nil {
+		t.Fatalf("backup offline key should be accepted: %v", err)
+	}
+}
+
+func TestOfflineSignatureFromUnknownKeyRefused(t *testing.T) {
+	s := newSigner(t)
+	_, err := Verify(s.make(2, "loosen", removeEtc, "stranger"), s.trust, after(s.enrolled()))
+	expectCode(t, err, "needs_offline_signature")
+}
+
+func TestNoOfflineKeyMeansNothingCanLoosen(t *testing.T) {
+	s := newSigner(t)
+	tr := s.trust
+	tr.OfflineKeys = nil
+	v1, err := Verify(s.make(1, "initial", nil), tr, enrollOpts())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Verify(s.make(2, "loosen", removeEtc, "offline"), tr, after(v1))
+	expectCode(t, err, "needs_offline_signature")
+}
+
+func TestLooseLabelRaisesTheBar(t *testing.T) {
+	s := newSigner(t)
+	_, err := Verify(s.make(2, "loosen", addDeny), s.trust, after(s.enrolled()))
+	expectCode(t, err, "needs_offline_signature")
+}
+
+func TestInitialOnlyAtEnrollment(t *testing.T) {
+	s := newSigner(t)
+	_, err := Verify(s.make(5, "initial", nil), s.trust, after(s.enrolled()))
+	expectCode(t, err, "bad_change")
 }
 
 func TestAtLeast(t *testing.T) {
@@ -183,17 +317,4 @@ func TestWriteFileAtomic(t *testing.T) {
 	if string(data) != "b" || fi.Mode().Perm() != 0o600 {
 		t.Fatalf("got %q %v", data, fi.Mode())
 	}
-}
-
-func mustCanonical(t *testing.T, v map[string]any) []byte {
-	t.Helper()
-	generic, err := canonical.Decode(encode(t, v))
-	if err != nil {
-		t.Fatal(err)
-	}
-	out, err := canonical.Marshal(generic)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return out
 }

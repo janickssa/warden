@@ -1,0 +1,9119 @@
+[
+ {
+  "expected": "tighten",
+  "name": "add deny path",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod",
+     "/srv/dev/secret"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "remove deny path",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "add deny pattern",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     },
+     {
+      "group": null,
+      "source": "npm\\s+publish"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "remove deny pattern",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "none",
+  "name": "relabel deny pattern group",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": "g",
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "remove program",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "add program",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     },
+     "rm": {
+      "flags_deny": [],
+      "subcommands": null
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "remove subcommand",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "add subcommand",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log",
+       "push"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "unrestricted subcommands",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": null
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "restrict subcommands",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": [
+       "x"
+      ]
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "add flag deny",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config",
+       "-L"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "remove flag deny",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "add git host",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com",
+     "gitlab.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "remove http host",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "widen project glob",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*",
+     "*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "add denied container",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy",
+     "db-*"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "remove denied container",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "lower step limit",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 10
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "raise timeout",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 601
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "lower timeout",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 300
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "read-only restricted",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "restricted"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "read-only add deny path",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [
+      {
+       "group": "g",
+       "path": "/srv/x"
+      }
+     ],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "passkey on",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": true
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "unanimous on",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": true
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "lockdown on",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": true,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "add workspace root",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev",
+     "/srv/other"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "change docker socket",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": "/var/run/docker.sock",
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "change target",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev2",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "mixed tighten and loosen",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod",
+     "/x"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com",
+     "evil.example"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "none",
+  "name": "group names only",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [
+     "informational"
+    ],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "loosen",
+  "name": "add approval key",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    },
+    {
+     "key_id": "ed25519:bbbb",
+     "public": "BBBB"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ },
+ {
+  "expected": "tighten",
+  "name": "remove approval key",
+  "new": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  },
+  "old": {
+   "approval_keys": [
+    {
+     "key_id": "ed25519:aaaa",
+     "public": "AAAA"
+    },
+    {
+     "key_id": "ed25519:bbbb",
+     "public": "BBBB"
+    }
+   ],
+   "rules": {
+    "allow": {
+     "curl": {
+      "flags_deny": [
+       "-o",
+       "--output",
+       "-T",
+       "--upload-file",
+       "-K",
+       "--config"
+      ],
+      "subcommands": null
+     },
+     "docker": {
+      "flags_deny": [],
+      "subcommands": [
+       "ps",
+       "logs",
+       "inspect",
+       "start",
+       "stop",
+       "restart",
+       "compose"
+      ]
+     },
+     "git": {
+      "flags_deny": [],
+      "subcommands": [
+       "clone",
+       "pull",
+       "fetch",
+       "checkout",
+       "status",
+       "log"
+      ]
+     },
+     "npm": {
+      "flags_deny": [],
+      "subcommands": [
+       "ci",
+       "install",
+       "test",
+       "run"
+      ]
+     }
+    },
+    "allowed_projects": [
+     "dev-*"
+    ],
+    "approvals": {
+     "passkey": false
+    },
+    "denied_containers": [
+     "prod-*",
+     "docker-socket-proxy"
+    ],
+    "deny_paths": [
+     "/etc",
+     "/root",
+     "/home",
+     "/var/lib/docker",
+     "/srv/prod"
+    ],
+    "deny_patterns": [
+     {
+      "group": null,
+      "source": "rm\\s+-rf\\s+/"
+     },
+     {
+      "group": null,
+      "source": "curl .*\\|\\s*(ba)?sh"
+     },
+     {
+      "group": null,
+      "source": "chmod\\s+777"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*--privileged"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+run\\s+.*-v\\s+/:"
+     },
+     {
+      "group": null,
+      "source": "docker\\s+compose\\s+.*down\\s+.*-v"
+     }
+    ],
+    "docker_socket": null,
+    "gatekeepers": {
+     "unanimous": false
+    },
+    "git_hosts": [
+     "github.com"
+    ],
+    "groups": [],
+    "http_check_hosts": [
+     "localhost",
+     "127.0.0.1",
+     "*.dev.lan"
+    ],
+    "limits": {
+     "output_cap_mb": {
+      "group": null,
+      "value": 1
+     },
+     "plan_max_steps": {
+      "group": null,
+      "value": 25
+     },
+     "step_timeout_s": {
+      "group": null,
+      "value": 600
+     }
+    },
+    "lockdown": false,
+    "read_only": {
+     "deny_paths": [],
+     "group": null,
+     "mode": "allowed"
+    },
+    "schema": 1,
+    "target": "dev",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   }
+  }
+ }
+]

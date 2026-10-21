@@ -58,17 +58,18 @@ type Bundle struct {
 	Signatures      []Signature     `json:"signatures"`
 }
 
-// Trust is what the agent pinned at enrollment.
+// Trust is what the agent pinned at enrollment, through the CA-pinned channel the human confirmed.
 type Trust struct {
 	OnlineKeyID  string `json:"online_key_id"`
 	OnlinePublic string `json:"online_public"`
-	// Offline key: set when the human registers one (M3). Until then nothing can sign a loosening.
-	OfflineKeyID  string `json:"offline_key_id,omitempty"`
-	OfflinePublic string `json:"offline_public,omitempty"`
+	// Offline keys (primary and backup). Either can sign a loosening. Without one, nothing can loosen.
+	OfflineKeys []KeyRef `json:"offline_keys"`
 }
 
 // Verified is an accepted bundle.
 type Verified struct {
+	Class        string // what the agent itself computed: initial, none, tighten or loosen
+	Changes      []string
 	Bundle       *Bundle
 	Rules        *policy.Rules
 	SHA256       string
@@ -142,12 +143,35 @@ func verifySig(sigs []Signature, key, keyID string, pub ed25519.PublicKey, msg [
 	return false
 }
 
-// Options control sequencing checks. Installed=true re-verifies a bundle already on disk.
+// Options control sequencing checks.
+//
+// Current is the bundle the agent enforces now (nil only at enrollment): the new bundle is classified
+// against it. Installed=true re-verifies the bundle already on disk at start-up.
 type Options struct {
-	InstalledVersion int
-	OwnTarget        string
-	AgentVersion     string
-	Installed        bool
+	Current      *Verified
+	OwnTarget    string
+	AgentVersion string
+	Installed    bool
+}
+
+func (o Options) installedVersion() int {
+	if o.Current == nil {
+		return 0
+	}
+	return o.Current.Bundle.Version
+}
+
+func verifyOffline(sigs []Signature, keys []KeyRef, msg []byte) bool {
+	for _, k := range keys {
+		pub, err := decodeKey(k.Public)
+		if err != nil {
+			continue
+		}
+		if verifySig(sigs, "offline", k.KeyID, pub, msg) {
+			return true
+		}
+	}
+	return false
 }
 
 // Verify checks a bundle received from Warden (or re-checks the stored one).
@@ -179,12 +203,17 @@ func Verify(raw []byte, trust Trust, opt Options) (*Verified, error) {
 		return nil, refuse("agent_too_old", "bundle needs agent %s, this is %s", b.MinAgentVersion, opt.AgentVersion)
 	}
 	if !opt.Installed {
-		if b.Version <= opt.InstalledVersion {
-			return nil, refuse("old_version", "bundle v%d is not newer than installed v%d", b.Version, opt.InstalledVersion)
+		if b.Version <= opt.installedVersion() {
+			return nil, refuse("old_version", "bundle v%d is not newer than installed v%d", b.Version, opt.installedVersion())
 		}
-		if b.Change == "initial" && opt.InstalledVersion != 0 {
-			return nil, refuse("bad_change", "an initial bundle is only accepted at enrollment")
+		if (b.Change == "initial") != (opt.Current == nil) {
+			return nil, refuse("bad_change", "an initial bundle is accepted at enrollment only, and only then")
 		}
+	}
+	switch b.Change {
+	case "initial", "tighten", "loosen":
+	default:
+		return nil, refuse("bad_change", "unknown change class %q", b.Change)
 	}
 
 	unsigned := make(map[string]any, len(obj))
@@ -205,22 +234,6 @@ func Verify(raw []byte, trust Trust, opt Options) (*Verified, error) {
 	if !verifySig(b.Signatures, "online", trust.OnlineKeyID, onlinePub, msg) {
 		return nil, refuse("bad_signature", "no valid online-key signature")
 	}
-	switch b.Change {
-	case "initial", "tighten":
-	case "loosen":
-		if trust.OfflinePublic == "" {
-			return nil, refuse("needs_offline_signature", "loosening needs the offline key, and none is registered")
-		}
-		offPub, err := decodeKey(trust.OfflinePublic)
-		if err != nil {
-			return nil, refuse("bad_trust", "offline key: %v", err)
-		}
-		if !verifySig(b.Signatures, "offline", trust.OfflineKeyID, offPub, msg) {
-			return nil, refuse("needs_offline_signature", "loosening needs a valid offline-key signature")
-		}
-	default:
-		return nil, refuse("bad_change", "unknown change class %q", b.Change)
-	}
 
 	rules, err := policy.ParseRules(b.Rules)
 	if err != nil {
@@ -228,6 +241,17 @@ func Verify(raw []byte, trust Trust, opt Options) (*Verified, error) {
 	}
 	if rules.Target != b.Target {
 		return nil, refuse("wrong_target", "rules are for %q", rules.Target)
+	}
+
+	// The agent decides for itself whether this loosens anything; the bundle's label can't lower the bar.
+	class, changes := "initial", []string(nil)
+	if opt.Current != nil {
+		class, changes = Classify(opt.Current.Rules, rules, opt.Current.Bundle.ApprovalKeys, b.ApprovalKeys)
+	}
+	if class == "loosen" || b.Change == "loosen" {
+		if !verifyOffline(b.Signatures, trust.OfflineKeys, msg) {
+			return nil, refuse("needs_offline_signature", "this bundle loosens policy and has no valid offline-key signature (%d change(s))", len(changes))
+		}
 	}
 	keys := map[string]ed25519.PublicKey{}
 	for _, k := range b.ApprovalKeys {
@@ -241,7 +265,7 @@ func Verify(raw []byte, trust Trust, opt Options) (*Verified, error) {
 	if err != nil {
 		return nil, refuse("bad_bundle", "%v", err)
 	}
-	return &Verified{Bundle: &b, Rules: rules, SHA256: canonical.SHA256Tagged(full), Canonical: full, ApprovalKeys: keys}, nil
+	return &Verified{Class: class, Changes: changes, Bundle: &b, Rules: rules, SHA256: canonical.SHA256Tagged(full), Canonical: full, ApprovalKeys: keys}, nil
 }
 
 // WriteFileAtomic writes, fsyncs, renames and fsyncs the directory.

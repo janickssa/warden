@@ -320,7 +320,10 @@ func (a *Agent) handle(ctx context.Context, data []byte, w *writer) {
 }
 
 func (a *Agent) installBundle(raw json.RawMessage, w *writer) {
-	v, err := bundle.Verify(raw, a.Cfg.Trust, bundle.Options{InstalledVersion: a.policyVersion(), OwnTarget: a.Cfg.Name, AgentVersion: a.Version})
+	a.mu.Lock()
+	current := a.current
+	a.mu.Unlock()
+	v, err := bundle.Verify(raw, a.Cfg.Trust, bundle.Options{Current: current, OwnTarget: a.Cfg.Name, AgentVersion: a.Version})
 	if err != nil {
 		var be *bundle.Error
 		code := "bad_bundle"
@@ -338,7 +341,7 @@ func (a *Agent) installBundle(raw json.RawMessage, w *writer) {
 	a.mu.Lock()
 	a.current = v
 	a.mu.Unlock()
-	log.Printf("installed policy v%d (%s)", v.Bundle.Version, v.Bundle.Change)
+	log.Printf("installed policy v%d (%s, classified %s)", v.Bundle.Version, v.Bundle.Change, v.Class)
 	w.sendTyped("bundle_ack", map[string]any{"version": v.Bundle.Version, "sha256": v.SHA256})
 }
 
