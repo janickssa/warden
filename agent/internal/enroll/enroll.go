@@ -187,7 +187,14 @@ func finish(dir state.Dir, server, prefix string, r reply, version string, out i
 	if err := dir.SaveConfig(cfg); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "Enrolled as %s (%s) · policy v%d. Start it with: systemctl enable --now warden-agent\n", r.Name, r.AgentID, v.Bundle.Version)
+	fmt.Fprintf(out, "Enrolled as %s (%s) · policy v%d.\n", r.Name, r.AgentID, v.Bundle.Version)
+	if len(cfg.Trust.OfflineKeys) == 0 {
+		fmt.Fprintln(out, "No offline key registered on Warden: this agent will refuse every loosening. Register one, then re-enroll.")
+	}
+	for _, k := range cfg.Trust.OfflineKeys {
+		fmt.Fprintf(out, "Trusts offline key %s for loosening. Check it matches `warden-sign pubkey` on your laptop.\n", k.KeyID)
+	}
+	fmt.Fprintln(out, "Start it with: systemctl enable --now warden-agent")
 	return nil
 }
 

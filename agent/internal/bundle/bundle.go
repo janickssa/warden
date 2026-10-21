@@ -206,8 +206,10 @@ func Verify(raw []byte, trust Trust, opt Options) (*Verified, error) {
 		if b.Version <= opt.installedVersion() {
 			return nil, refuse("old_version", "bundle v%d is not newer than installed v%d", b.Version, opt.installedVersion())
 		}
-		if (b.Change == "initial") != (opt.Current == nil) {
-			return nil, refuse("bad_change", "an initial bundle is accepted at enrollment only, and only then")
+		// At enrollment the agent takes whatever version is current (it arrives through the CA-pinned channel
+		// the human confirmed); "initial" is never accepted as an update.
+		if b.Change == "initial" && opt.Current != nil {
+			return nil, refuse("bad_change", "an initial bundle is accepted at enrollment only")
 		}
 	}
 	switch b.Change {

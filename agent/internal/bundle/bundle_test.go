@@ -144,8 +144,9 @@ func TestRefusals(t *testing.T) {
 	_, err = Verify(dup, tr, enrollOpts())
 	expectCode(t, err, "bad_bundle")
 
-	_, err = Verify(encode(t, v.BundleV2), tr, enrollOpts()) // non-initial at enrollment
-	expectCode(t, err, "bad_change")
+	if _, err = Verify(encode(t, v.BundleV2), tr, enrollOpts()); err != nil { // enrolling after v1
+		t.Fatal(err)
+	}
 }
 
 // --- Bundles signed here, to exercise tighten/loosen -----------------------------------------------
@@ -290,6 +291,20 @@ func TestInitialOnlyAtEnrollment(t *testing.T) {
 	s := newSigner(t)
 	_, err := Verify(s.make(5, "initial", nil), s.trust, after(s.enrolled()))
 	expectCode(t, err, "bad_change")
+}
+
+// An agent enrolled after v1 gets the current version, whatever its label.
+func TestEnrollOnLaterVersion(t *testing.T) {
+	s := newSigner(t)
+	if _, err := Verify(s.make(7, "tighten", addDeny), s.trust, enrollOpts()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Verify(s.make(8, "loosen", removeEtc, "offline"), s.trust, enrollOpts()); err != nil {
+		t.Fatal(err)
+	}
+	// The label still raises the bar at enrollment.
+	_, err := Verify(s.make(8, "loosen", removeEtc), s.trust, enrollOpts())
+	expectCode(t, err, "needs_offline_signature")
 }
 
 func TestAtLeast(t *testing.T) {
