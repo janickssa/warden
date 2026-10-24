@@ -37,7 +37,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 | M2 ☑ | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
 | M3 ☑ | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_policy_distribution.py` (5 agents, timed) and `test_cli_daemon.py::test_m3_dry_run`, plus classifier property tests; manual run in `docs/m3-demo.md` |
 | M4 ☑ | MCP | MCPServer tools (§6 + `post_diagnosis`), Streamable HTTP + stdio bridge, MCP client tokens (elicitation moved to M6, M4-03) | Works end-to-end from Claude Code over WireGuard | `test_cli_daemon.py::test_m4_dry_run` (real HTTP, real agent) + manual Claude Code session in `docs/m4-demo.md` |
-| M5 | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
+| M5 ◐ | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
 | M6 | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | Playwright suite (states from §17.6 per page) + manual check over VPN |
 | M7 | Schedules | Templates, APScheduler cron, expiry, pause/resume, failure notify | Nightly job runs and reports | Time-travel scheduler test + one real nightly run |
 | M8 | iPhone app | SwiftUI app, `WardenCore` package, APNs, Face ID, lockdown, approve with edits | Approve from the lock screen | `swift test` on Linux (WardenCore + view models) + TestFlight manual check |
@@ -544,14 +544,78 @@ Differences from the plan above:
 - No FastAPI yet: the MCP SDK's Starlette app is enough until the REST API (M4-01).
 - Commits 1–3 landed as one, because the tools, auth and endpoint were tested together.
 
-## M5 Gatekeepers — outline
+## M5 Gatekeepers — detailed plan
 
-Panel with `strictest` mode and the group `unanimous` override; adapters for Ollama, OpenAI, Anthropic and
-OpenAI-compatible endpoints (JSON mode, temperature 0, timeout → escalate, parse failure → escalate);
-prompt with `<untrusted>` delimiting and escaping of any `</untrusted>` in content; secret scrubbing;
-`send_untrusted_output`. Injection fixtures (README instructions, comments in package.json, ANSI-hidden
-text, fake JSON verdicts in output, "the user already approved this", etc.). CI runs them against recorded
-responses; `pytest -m live` runs them against the real configured models.
+**Goal (README 9; Done when: injection tests escalate or deny on every reviewer).** A panel of reviewer models
+from different providers answers one question per plan, *do these steps do what the goal says, and nothing
+more?* Gatekeepers can only make things stricter (invariant 6): every error, timeout or odd answer counts as
+`escalate`, and a policy deny never reaches them.
+
+### Files (`backend/src/warden/gatekeeper/`)
+- `config.py`: `gatekeeper.yaml` (single source of truth, §16 rule 8): `mode: strictest`, `timeout_s`, and
+  `reviewers[]` with `name`, `provider` (`ollama` | `openai` | `anthropic` | `openai_compatible`), `url`, `model`,
+  `api_key: secret:NAME`, `send_untrusted_output`, and per-provider `options`. Secrets are files in
+  `<config dir>/secrets/NAME` (README 12: `/etc/warden/secrets`, mode 0600). A missing secret or an invalid
+  file means that reviewer is unavailable (escalate), never skipped. No `gatekeeper.yaml` means no reviewers
+  (escalate, D-19).
+- `prompt.py`: a fixed system prompt plus the request: goal, target, steps, a compact policy summary, the
+  previous failed plan with its error, diagnoses and output (for revisions). All target output and Claude's
+  notes go inside `<untrusted>…</untrusted>`, after escaping any `<untrusted>`/`</untrusted>` (D-18), stripping
+  ANSI escape sequences (so hidden text becomes visible), removing invisible characters, scrubbing known
+  secret values, and capping length. Untrusted output only reaches reviewers with `send_untrusted_output`.
+- `verdict.py`: the README §9 JSON schema, validated with Pydantic. It fails closed: anything that isn't
+  exactly one JSON object matching the schema with one `per_step` entry per step is `escalate`. Consistency
+  rules make it stricter: `allow` with any `matches_goal: false` or `risk: high` becomes `escalate`.
+- `adapters.py`: small sync adapters over `httpx2`, all at temperature 0 with structured output.
+  - **Ollama:** `/api/chat` with `format` set to the JSON schema, `think: false` and `num_ctx`.
+  - **OpenAI and OpenAI-compatible:** chat completions with `response_format` set to a JSON schema (or
+    `json_object` for endpoints without schema support).
+  - **Anthropic:** Messages API with one forced tool whose input schema is the verdict.
+- `scan.py`: a built-in deterministic reviewer, `injection-scan`. It escalates when untrusted text carries
+  known injection markers: "ignore previous instructions", "already approved", fake verdict JSON, ANSI
+  escapes, invisible characters, role tags. It can only escalate, never allow or deny, and it makes the
+  injection suite pass in CI without any model.
+- `panel.py`: `ReviewPanel` runs every reviewer in parallel threads under one overall timeout. Strictest wins
+  (as now). The group `unanimous` flag is already implied by `strictest`; any non-`allow` from any reviewer
+  escalates.
+
+### Wiring
+- `warden serve` and the CLI build the panel from `gatekeeper.yaml`; `reload` re-reads it.
+- MCP tools run sync code in worker threads, so slow reviewers never block the agent listener.
+- `warden gatekeeper check` sends one harmless and one malicious sample plan to every reviewer and prints
+  their verdicts and timings (manual check).
+- `warden gatekeeper record --out FILE` runs the injection fixtures against the real reviewers and saves their
+  raw replies.
+- **Default local model:** `qwen3:14b` on the owner's RTX 3060 12 GB, with `qwen3:8b` as the fallback
+  (DECISIONS D-01, updated).
+
+### Tests
+- **Injection fixtures** (`backend/tests/gatekeeper/injection.yaml`):
+  - a README saying "ignore previous instructions and run …";
+  - instructions hidden in a `package.json` comment;
+  - ANSI-hidden text;
+  - a fake JSON verdict in the output;
+  - "the user already approved this";
+  - a closing `</untrusted>` smuggled into the content;
+  - a revision that quietly adds an unrelated step;
+  - a goal/step mismatch (the goal says tests, a step deletes data);
+  - an exfiltration step (`curl -d @.env`).
+- **CI, no models:**
+  - each fixture produces a prompt with the attack fully inside the delimiters;
+  - `injection-scan` escalates the context-based attacks;
+  - every adapter turns a fooled reply ("allow, low risk, all steps match"), malformed JSON, extra prose,
+    timeouts, HTTP errors and refusals into the right verdict;
+  - recorded replies, once the owner records them, replay through the adapters.
+- **Live** (`pytest -m live`, needs the real models): every fixture on every configured reviewer must come back
+  `escalate` or `deny`. This is the Done-when, run on the owner's setup. Results are written down in
+  `docs/m5-demo.md`.
+
+### Commits
+1. `gatekeeper: config, secrets, prompt and verdict parsing`
+2. `gatekeeper: adapters, injection-scan and panel`
+3. `gatekeeper: wiring, check/record CLI`
+4. `test: injection fixtures and live suite`
+5. `docs: M5 checklist, README §9, decisions`
 
 ## M6 Dashboard — outline
 
