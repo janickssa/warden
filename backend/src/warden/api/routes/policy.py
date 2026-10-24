@@ -204,12 +204,32 @@ def get_policy(c: Ctx, _: Human) -> sc.PolicyView:
         compiled=compiled,
         unpublished_changes=unpublished,
         writable=os.access(path, os.W_OK) and os.access(path.parent, os.W_OK),
+        document=_document(path),
     )
+
+
+def _document(path: Path) -> dict[str, Any]:
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 @router.post("/policy/preview")
 def preview(body: sc.PolicyIn, c: Ctx, human: Human) -> sc.PolicyPreview:
-    return preview_text(c, body.yaml, human.label)
+    if (body.yaml is None) == (body.document is None):
+        raise WardenError("send either yaml or document", code="bad_request")
+    if body.yaml is not None:
+        return preview_text(c, body.yaml, human.label)
+    data = yaml.safe_load(_policy_path(c).read_text(encoding="utf-8")) or {}
+    for key, value in (body.document or {}).items():
+        if key != "groups":  # the Groups page owns those
+            data[key] = value
+    text = yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
+    return preview_text(
+        c, text, human.label, note="Saving from the form rewrites policy.yaml; comments in it are not kept."
+    )
 
 
 @router.post("/policy/publish/options")
@@ -301,8 +321,10 @@ def discard(c: Ctx, human: Human) -> sc.Ok:
 
 
 @router.post("/lockdown")
-async def lockdown(c: Ctx, human: Human) -> sc.PublishResultView:
-    """Kill running plans, hold approved ones, publish read-only-only rules (README 7A Lockdown)."""
+async def lockdown(body: sc.ConfirmIn, c: Ctx, human: Human) -> sc.PublishResultView:
+    """Kill running plans, hold approved ones, publish read-only-only rules (README 7A Lockdown). From the
+    dashboard it takes a press-and-hold and a passkey, so a stolen session can't force an offline-key lift."""
+    c.passkeys.verify(body.challenge_id, body.credential, "lockdown", "", now=c.now())
     r = publishing.lockdown(c.engine, online=c.online, approval=c.approval, now=c.now(), actor=human.label)
     for p in c.plans.list_plans(statuses=(PlanStatus.APPROVED,)):
         c.plans.hold(p.id, "lockdown")

@@ -16,7 +16,7 @@ from sqlmodel import Field, Session, SQLModel, col, select
 from ulid import ULID
 
 from warden import audit
-from warden.actors import ClaudeActor
+from warden.actors import ClaudeActor, HumanActor
 from warden.errors import InputRefused, WardenError
 from warden.plans import store
 from warden.plans.models import PlanStatus
@@ -163,3 +163,45 @@ def for_plan(engine: Engine, plan_id: str) -> list[Diagnosis]:
                 Diagnosis(d.id, d.plan_id, d.client, d.note, d.created_at, tuple(_evidence(r) for r in rows))
             )
         return out
+
+
+# --- the human's side: "Diagnose & propose fix…" in the dashboard (D-14) ------------------------------
+
+
+class HumanNoteRow(SQLModel, table=True):
+    __tablename__ = "diagnosis_requests"
+
+    plan_id: str = Field(primary_key=True)
+    note: str
+    by: str
+    created_at: str
+
+
+def request(engine: Engine, *, plan_id: str, note: str, actor: HumanActor, now: datetime) -> None:
+    """Ask Claude to diagnose a failed plan. The note reaches Claude through `get_plan` (`human_note`); it
+    never changes the plan. Plain text, the same rules as Claude's notes, and replaced if asked again."""
+    note = normalize(note)
+    try:
+        check_free_text(note, field="note", max_len=MAX_NOTE, allow_newlines=True)
+    except InputRefused as exc:
+        raise DiagnosisRefused(exc.message, code="bad_note") from exc
+    with Session(engine) as s, s.begin():
+        plan = store.get(s, plan_id)
+        if plan.status != PlanStatus.FAILED:
+            raise DiagnosisRefused(
+                f"{plan_id} is {plan.status.value}; only failed plans are diagnosed", code="not_failed"
+            )
+        row = s.get(HumanNoteRow, plan_id)
+        if row is None:
+            row = HumanNoteRow(plan_id=plan_id, note=note, by=actor.label, created_at=now.isoformat())
+        else:
+            row.note, row.by, row.created_at = note, actor.label, now.isoformat()
+        s.add(row)
+        audit.append(
+            s, ts=now, actor=actor.label, action="diagnosis_requested", subject=plan_id, detail={"note": note}
+        )
+
+
+def human_note(engine: Engine, plan_id: str) -> HumanNoteRow | None:
+    with Session(engine) as s:
+        return s.get(HumanNoteRow, plan_id)

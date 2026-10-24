@@ -15,6 +15,7 @@ from warden.dispatch import outputs
 from warden.dispatch.server import effective_cap_bytes
 from warden.errors import ApprovalRefused
 from warden.passkeys import PasskeyRefused, active, challenge_for
+from warden.plans import diagnosis
 from warden.plans.models import PasskeyAssertion, StepEdit
 from warden.signing import approval_message
 
@@ -121,6 +122,13 @@ def approve_with_edits(plan_id: str, body: sc.EditsIn, c: Ctx, human: Human) -> 
 def reject(plan_id: str, body: sc.RejectIn, c: Ctx, human: Human) -> sc.PlanDetail:
     p = c.plans.reject(plan_id, human, body.reason or None)
     return views.detail(c, p, views.Facts(c))
+
+
+@router.post("/plans/{plan_id}/diagnose")
+def diagnose(plan_id: str, body: sc.DiagnoseIn, c: Ctx, human: Human) -> sc.PlanDetail:
+    """ "Diagnose & propose fix…": the note reaches Claude through get_plan (D-14). No plan state changes."""
+    diagnosis.request(c.engine, plan_id=plan_id, note=body.note, actor=human, now=c.now())
+    return views.detail(c, c.plans.get(plan_id), views.Facts(c))
 
 
 @router.post("/plans/{plan_id}/kill")

@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
+from warden import audit
 from warden.api import schemas as sc
 from warden.api.context import ApiContext
 from warden.dispatch import outputs
@@ -173,7 +174,21 @@ def _output_text(ctx: ApiContext, plan_id: str, n: int) -> str:
         return "".join(r.data for r in outputs.read(s, plan_id, n))
 
 
+def _run_times(ctx: ApiContext, plan_id: str) -> tuple[str | None, str | None]:
+    with Session(ctx.engine) as s:
+        rows = s.exec(
+            select(audit.AuditRow).where(
+                col(audit.AuditRow.subject) == plan_id,
+                col(audit.AuditRow.action).in_(("run_started", "run_finished")),
+            )
+        ).all()
+    started = max((r.ts for r in rows if r.action == "run_started"), default=None)
+    ended = max((r.ts for r in rows if r.action == "run_finished"), default=None)
+    return started, (ended if ended and started and ended >= started else None)
+
+
 def detail(ctx: ApiContext, p: Plan, facts: Facts) -> sc.PlanDetail:
+    started_at, ended_at = _run_times(ctx, p.id)
     base = summary(p, facts, with_agent=True).model_dump()
     base["changed_steps"] = changed_steps(ctx, p)
     results = {r.n: r for r in p.step_results}
@@ -284,6 +299,9 @@ def detail(ctx: ApiContext, p: Plan, facts: Facts) -> sc.PlanDetail:
         passkey_reasons=ctx.plans.passkey_reasons(p) if p.status in PENDING else [],
         passkeys_registered=len(active(ctx.engine)),
         e2e=facts.cfg.e2e,
+        started_at=started_at,
+        ended_at=ended_at,
+        human_note=(hn.note if (hn := diagnosis.human_note(ctx.engine, p.id)) else None),
     )
 
 

@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "../styles/nocturne.css";
+@import "../styles/status.css";
+@import "../styles/warden.css";
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-ok: var(--color-ok);
+  --color-warn: var(--color-warn);
+  --color-danger: var(--color-danger);
+  --font-mono: var(--font-mono);
+}

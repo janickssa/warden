@@ -195,7 +195,7 @@ class WardenMcp:
             "held_reason": p.held_reason,
             "invalid_reason": p.invalid_reason,
             "reject_reason": p.reject_reason,
-            "human_note": None,  # the dashboard's "Diagnose & propose fix" note (M6)
+            "human_note": hn.note if (hn := diagnosis.human_note(self._engine, p.id)) else None,
             "next": self._next(p),
         }
         if full and p.status == S.FAILED:

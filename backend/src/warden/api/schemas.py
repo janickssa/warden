@@ -142,6 +142,8 @@ class PlanDetail(PlanSummary):
     passkeys_registered: int
     e2e: bool
     human_note: str | None = None
+    started_at: str | None = None
+    ended_at: str | None = None
 
 
 class OutputChunk(BaseModel):
@@ -181,6 +183,10 @@ class EditsIn(In):
 
 class RejectIn(In):
     reason: str | None = Field(default=None, max_length=500)
+
+
+class DiagnoseIn(In):
+    note: str = Field(default="", max_length=4000)
 
 
 class Ok(BaseModel):
@@ -254,7 +260,10 @@ class PolicyPreview(BaseModel):
 
 
 class PolicyIn(In):
-    yaml: str = Field(max_length=200_000)
+    """Either the whole file as YAML, or the global sections from the Policy form (groups are kept)."""
+
+    yaml: str | None = Field(default=None, max_length=200_000)
+    document: dict[str, Any] | None = None
 
 
 class PublishIn(In):
@@ -306,6 +315,7 @@ class PolicyView(BaseModel):
     compiled: dict[str, Any]
     unpublished_changes: bool
     writable: bool
+    document: dict[str, Any] = {}
 
 
 class SignatureIn(In):
@@ -339,6 +349,8 @@ class AuditEntry(BaseModel):
     action: str
     subject: str
     detail: dict[str, Any]
+    hash: str = ""
+    prev: str = ""
 
 
 class AuditPage(BaseModel):

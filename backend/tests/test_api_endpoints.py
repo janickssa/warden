@@ -10,7 +10,7 @@ import pytest
 from apihelp import ALICE_CLI, ORIGIN, Api, make_api
 from softauth import SoftAuthenticator
 from sqlalchemy import Engine
-from sqlmodel import Session
+from sqlmodel import Session, select
 from svc import World
 
 from warden import audit
@@ -307,7 +307,8 @@ def test_groups_view_and_edit(api: Api) -> None:
 def test_lockdown_and_lift(api: Api) -> None:
     p = api.world.propose("npm ci")
     api.world.svc.approve(p.id, p.hash, ALICE_CLI)
-    r = ok(api.post("/api/lockdown"))
+    assert api.post("/api/lockdown", {"challenge_id": "x", "credential": {}}).status_code >= 400
+    r = ok(api.post("/api/lockdown", api.confirm("lockdown")))
     assert r["outcome"] == "published"
     assert api.world.svc.get(p.id).status.value == "held"
     assert ok(api.get("/api/status"))["lockdown"] is True
@@ -407,3 +408,36 @@ def test_openapi_schema_is_complete(api: Api) -> None:
         "/api/settings",
     } <= paths
     assert "approve" not in json.dumps([p for p in paths if p.startswith("/mcp")])
+
+
+def test_diagnose_note_reaches_get_plan(api: Api) -> None:
+    from warden.plans.runs import StepOutcome
+
+    p = api.world.propose("npm ci")
+    assert api.post(f"/api/plans/{p.id}/diagnose", {"note": "too early"}).status_code == 400
+    api.world.svc.approve(p.id, p.hash, ALICE_CLI)
+    api.world.svc.start_run(p.id)
+    api.world.svc.finish_run(p.id, [StepOutcome(n=1, exit_code=1)])
+    d = ok(api.post(f"/api/plans/{p.id}/diagnose", {"note": "Don’t stop dev-legacy-web"}))
+    assert d["human_note"] == "Don’t stop dev-legacy-web"
+    assert api.post(f"/api/plans/{p.id}/diagnose", {"note": "bad\u202enote"}).status_code >= 400
+    with Session(api.world.engine) as s:
+        assert audit.verify(s).ok
+        assert s.exec(select(audit.AuditRow).where(audit.AuditRow.action == "diagnosis_requested")).first()
+    assert api.world.svc.get(p.id).status.value == "failed"
+
+
+def test_policy_form_document_preview_keeps_groups(api: Api) -> None:
+    pol = ok(api.get("/api/policy"))
+    doc = pol["document"]
+    assert doc["limits"]["step_timeout_s"] > 0
+    lowered = {"limits": {**doc["limits"], "step_timeout_s": doc["limits"]["step_timeout_s"] - 1}}
+    pv = ok(api.post("/api/policy/preview", {"document": {**lowered, "groups": {}}}))
+    assert pv["cls"] == "tighten"
+    assert pv["preview_id"]
+    assert "comments" in pv["note"]
+    assert not any(line.startswith("-groups") for line in pv["yaml_diff"])  # the form can't drop groups
+    raised = {"limits": {**doc["limits"], "step_timeout_s": doc["limits"]["step_timeout_s"] + 1}}
+    assert ok(api.post("/api/policy/preview", {"document": raised}))["cls"] == "loosen"
+    assert api.post("/api/policy/preview", {}).status_code == 400
+    assert api.post("/api/policy/preview", {"yaml": pol["yaml"], "document": {}}).status_code == 400
