@@ -6,8 +6,8 @@ approvals:
   passkey_medium: false
   chat: true
   chat_max_steps: 10
-mcp:
-  # Claude's MCP endpoint (Streamable HTTP at /mcp). NPM forwards https://<public_url>/mcp here.
+http:
+  # /mcp (Claude), /api and /ws (the dashboard). NPM forwards those paths of https://<public_url> here.
   # Use the guest's LAN address if NPM runs on another host, and firewall the port to NPM only.
   listen_host: 127.0.0.1
   listen_port: 8700

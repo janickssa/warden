@@ -14,6 +14,8 @@ dependencies = [
     "uvicorn==0.54.0",
     "httpx2==2.13.1",
     "anthropic==1.13.0",
+    "fastapi==0.143.0",
+    "webauthn==3.0.1",
 ]
 
 [project.scripts]

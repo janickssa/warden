@@ -82,8 +82,9 @@ class AgentListenerSettings(BaseModel):
     server_names: tuple[str, ...] = ("warden.lan",)  # names/IPs agents use; they go into the server cert
 
 
-class McpSettings(BaseModel):
-    """Where the MCP endpoint listens. NPM forwards `/mcp` here (README 14); never expose it directly."""
+class HttpSettings(BaseModel):
+    """Where `/mcp`, `/api` and `/ws` listen. NPM forwards those paths here (README 14); never expose it
+    directly."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
     listen_host: str = "127.0.0.1"
@@ -97,7 +98,7 @@ class Settings(BaseModel):
     server: ServerSettings = ServerSettings()
     approvals: ApprovalSettings = ApprovalSettings()
     agents: AgentListenerSettings = AgentListenerSettings()
-    mcp: McpSettings = McpSettings()
+    http: HttpSettings = HttpSettings()
 
 
 def parse_settings(text: str, *, source: str = "settings.yaml") -> Settings:

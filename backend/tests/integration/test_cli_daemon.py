@@ -62,7 +62,7 @@ class Box:
         (self.cfg / "targets.yaml").write_text(f"- {{name: dev, workspace_roots: [{self.ws}]}}\n")
         (self.cfg / "settings.yaml").write_text(
             f"agents: {{listen_host: 127.0.0.1, listen_port: {self.port}, server_names: [127.0.0.1]}}\n"
-            f"mcp: {{listen_host: 127.0.0.1, listen_port: {self.mcp_port}}}\n"
+            f"http: {{listen_host: 127.0.0.1, listen_port: {self.mcp_port}}}\n"
             "server: {public_url: 'https://warden.example.dk'}\n"
         )
         self.procs: list[subprocess.Popen[bytes]] = []

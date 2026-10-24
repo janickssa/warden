@@ -98,7 +98,7 @@ def test_gate_refuses_before_mcp(engine: Engine) -> None:
 
 def test_allowed_hosts() -> None:
     s = Settings.model_validate(
-        {"server": {"public_url": "https://warden.example.dk"}, "mcp": {"listen_port": 8700}}
+        {"server": {"public_url": "https://warden.example.dk"}, "http": {"listen_port": 8700}}
     )
     assert "warden.example.dk" in allowed_hosts(s)
     assert "127.0.0.1:8700" in allowed_hosts(s)

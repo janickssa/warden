@@ -13,6 +13,7 @@ import warden.agents
 import warden.audit
 import warden.dispatch.outputs
 import warden.mcp.clients
+import warden.passkeys
 import warden.plans.diagnosis
 import warden.plans.store
 import warden.policy_dist.bundle

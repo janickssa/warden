@@ -19,7 +19,7 @@ about 20 min, on top of the M2/M3 setup with `dev` enrolled.
 ```bash
 sudoedit /etc/warden/settings.yaml
 #   server: {public_url: https://warden.example.dk}      # your real name
-#   mcp: {listen_host: 10.0.20.5, listen_port: 8700}     # the guest's LAN IP if NPM runs elsewhere
+#   http: {listen_host: 10.0.20.5, listen_port: 8700}     # the guest's LAN IP if NPM runs elsewhere
 sudo systemctl restart warden-backend
 journalctl -u warden-backend -n 3       # ✓ "… MCP on 10.0.20.5:8700/mcp …"
 warden mcp add claude-code

@@ -26,6 +26,9 @@ import uvicorn
 from sqlmodel import Session
 
 from warden.agents import Registry
+from warden.api.app import Root, create_api
+from warden.api.context import ApiContext
+from warden.api.events import EventBus
 from warden.ca import CA
 from warden.db import make_engine
 from warden.dispatch.server import Dispatcher
@@ -34,6 +37,7 @@ from warden.gatekeeper.panel import SwitchPanel, build_panel
 from warden.keys import OnlineKey
 from warden.mcp.http import build_app, identify_from_headers
 from warden.mcp.server import WardenMcp, build_server
+from warden.passkeys import Passkeys, RelyingParty
 from warden.plans.service import Config, PlanService
 from warden.policy_dist import bundle as bundles
 from warden.signing import ApprovalKey
@@ -74,6 +78,19 @@ class Daemon:
             ca=ca,
             online=online,
             config=lambda: self.config,
+        )
+        self.bus = EventBus(self.engine)
+        self.api_ctx = ApiContext(
+            engine=self.engine,
+            plans=self.plans,
+            dispatcher=self.dispatcher,
+            registry=self.registry,
+            passkeys=Passkeys(self.engine, RelyingParty.from_url(self.config.settings.server.public_url)),
+            config=lambda: self.config,
+            online=online,
+            approval=approval,
+            config_dir=self._config_dir,
+            reload=self.reload,
         )
         self.mcp = WardenMcp(
             engine=self.engine,
@@ -171,14 +188,16 @@ class Daemon:
             return {"dropped": req["name"]}
         raise WardenError(f"unknown operation {op!r}", code="bad_request")
 
-    def mcp_server(self) -> uvicorn.Server:
+    def http_server(self) -> uvicorn.Server:
+        """One port for `/mcp` (MCP bearer tokens), `/api` and `/ws` (passkey sessions)."""
         s = self.config.settings
-        app = build_app(build_server(self.mcp), self.engine, s)
+        mcp = build_app(build_server(self.mcp), self.engine, s)
+        api = create_api(self.api_ctx, self.bus)
         return uvicorn.Server(
             uvicorn.Config(
-                app,
-                host=s.mcp.listen_host,
-                port=s.mcp.listen_port,
+                Root(api, mcp),
+                host=s.http.listen_host,
+                port=s.http.listen_port,
                 log_level="warning",
                 proxy_headers=False,
                 server_header=False,
@@ -188,7 +207,8 @@ class Daemon:
 
     async def run(self) -> None:
         port = await self.dispatcher.start()
-        mcp_http = self.mcp_server()
+        mcp_http = self.http_server()
+        self.bus.start()
         mcp_task = asyncio.create_task(mcp_http.serve())
         path = self.home / SOCKET
         with contextlib.suppress(FileNotFoundError):
@@ -200,10 +220,10 @@ class Daemon:
             os.umask(old_umask)
         os.chmod(path, 0o600)
         log.info(
-            "agent listener on :%s, MCP on %s:%s/mcp, admin socket %s, policy v%s",
+            "agent listener on :%s, /mcp /api /ws on %s:%s, admin socket %s, policy v%s",
             port,
-            self.config.settings.mcp.listen_host,
-            self.config.settings.mcp.listen_port,
+            self.config.settings.http.listen_host,
+            self.config.settings.http.listen_port,
             path,
             self.config.policy_version,
         )
@@ -214,6 +234,7 @@ class Daemon:
         finally:
             expiry.cancel()
             mcp_http.should_exit = True
+            await self.bus.stop()
             with contextlib.suppress(Exception):
                 await asyncio.wait_for(mcp_task, 10)
             await self.dispatcher.stop()

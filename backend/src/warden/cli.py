@@ -26,7 +26,7 @@ from typing import Any
 from pydantic import ValidationError
 from sqlmodel import Session
 
-from warden import audit
+from warden import audit, passkeys
 from warden.actors import ClaudeActor, HumanActor
 from warden.agents import Registry
 from warden.ca import CA
@@ -40,6 +40,7 @@ from warden.gatekeeper.panel import NO_REVIEWERS, ReviewPanel, build_panel
 from warden.keys import OnlineKey
 from warden.mcp import clients as mcp_clients
 from warden.mcp.bridge import run_bridge
+from warden.passkeys import Passkeys, RelyingParty
 from warden.plans.models import Plan, PlanStatus, ProposeRequest, StepEdit
 from warden.plans.service import Config, PlanService
 from warden.policy.effective import effective_rules
@@ -242,6 +243,14 @@ def build_parser() -> argparse.ArgumentParser:
     mst = mcsub.add_parser("stdio", help="bridge stdio to Warden's /mcp (runs on the client's machine)")
     mst.add_argument("--url", required=True, help="e.g. https://warden.example.dk/mcp")
     mst.add_argument("--token-file", required=True)
+
+    pk = sub.add_parser("passkey", help="dashboard passkeys")
+    pksub = pk.add_subparsers(dest="pk_cmd", required=True)
+    pka = pksub.add_parser("add", help="print a one-time link (15 min) to register a passkey in the browser")
+    pka.add_argument("name", help='e.g. "MacBook" or "Backup key"')
+    pksub.add_parser("list")
+    pkr = pksub.add_parser("remove")
+    pkr.add_argument("name")
 
     gk = sub.add_parser("gatekeeper", help="check the reviewer models in gatekeeper.yaml")
     gksub = gk.add_subparsers(dest="gk_cmd", required=True)
@@ -459,6 +468,34 @@ def _mcp(home: Home, args: argparse.Namespace) -> int:
     return 0
 
 
+def _passkey(home: Home, args: argparse.Namespace) -> int:
+    home.check_private()
+    engine = make_engine(home.db)
+    cfg = home.config()
+    pks = Passkeys(engine, RelyingParty.from_url(cfg.settings.server.public_url))
+    now = datetime.now(UTC)
+    if args.pk_cmd == "add":
+        token = pks.create_enrollment(args.name, actor=_human(), now=now)
+        url = cfg.settings.server.public_url.rstrip("/")
+        _out("Open this on the device that holds the passkey (valid 15 min, once):")
+        _out(f"  {url}/register?token={token}")
+        return 0
+    rows = passkeys.active(engine)
+    if args.pk_cmd == "list":
+        if not rows:
+            _out("No passkeys. Add one with `warden passkey add MacBook`.")
+        for r in rows:
+            used = r.last_used_at or "-"
+            _out(f"{r.name:<20} {r.credential_id[:16]}…  alg {r.alg}  added {r.created_at}  last used {used}")
+        return 0
+    match = [r for r in rows if r.name == args.name]
+    if len(match) != 1:
+        raise WardenError(f"no single passkey named {args.name!r}", code="not_found")
+    pks.remove(match[0].credential_id, actor=_human(), now=now)
+    _out(f"removed {args.name}; its sessions are signed out")
+    return 0
+
+
 def _gatekeeper(home: Home, args: argparse.Namespace) -> int:
     cfg = load_gatekeeper(home.config_dir / "gatekeeper.yaml")
     if not cfg.reviewers:
@@ -634,6 +671,8 @@ def run(argv: Sequence[str]) -> int:
         return _mcp(home, args)
     if args.cmd == "gatekeeper":
         return _gatekeeper(home, args)
+    if args.cmd == "passkey":
+        return _passkey(home, args)
     if args.cmd == "agent":
         return _agent(home, args)
     if args.cmd == "serve":

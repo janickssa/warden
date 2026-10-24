@@ -84,8 +84,13 @@ class RequireClientToken:
 
 def allowed_hosts(settings: Settings) -> list[str]:
     public = urlsplit(settings.server.public_url).netloc
-    listen = f"{settings.mcp.listen_host}:{settings.mcp.listen_port}"
-    hosts = {public, listen, f"127.0.0.1:{settings.mcp.listen_port}", f"localhost:{settings.mcp.listen_port}"}
+    listen = f"{settings.http.listen_host}:{settings.http.listen_port}"
+    hosts = {
+        public,
+        listen,
+        f"127.0.0.1:{settings.http.listen_port}",
+        f"localhost:{settings.http.listen_port}",
+    }
     return sorted(h for h in hosts if h)
 
 
@@ -96,6 +101,6 @@ def build_app(server: MCPServer, engine: Engine, settings: Settings) -> ASGIApp:
         transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True, allowed_hosts=allowed_hosts(settings), allowed_origins=[]
         ),
-        host=settings.mcp.listen_host,
+        host=settings.http.listen_host,
     )
     return RequireClientToken(starlette, engine)
