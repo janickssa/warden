@@ -481,6 +481,7 @@ class Dispatcher:
                         "expires_at": plan.expires_at.isoformat(),
                         "hash": a.hash,
                         "signature": a.signature.model_dump(),
+                        "passkey": a.passkey.model_dump() if a.passkey else None,
                     },
                 )
             )

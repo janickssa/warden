@@ -85,11 +85,33 @@ def approval_key_refs(approval: ApprovalKey) -> list[dict[str, str]]:
     return [{"key_id": approval.key_id, "public": approval.public_b64}]
 
 
-def compiled_for(policy: Policy, targets: Targets, target: str, *, lockdown: bool = False) -> dict[str, Any]:
+def compiled_for(
+    policy: Policy,
+    targets: Targets,
+    target: str,
+    *,
+    lockdown: bool = False,
+    trust: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     t = targets.get(target)
     if t is None:
         raise WardenError(f"unknown target {target}", code="unknown_target")
-    return compile_rules(effective_rules(policy, t, lockdown=lockdown), t)
+    return compile_rules(effective_rules(policy, t, lockdown=lockdown), t, trust)
+
+
+def trust_of(rules: dict[str, Any]) -> dict[str, Any]:
+    """The approval trust part of compiled rules (everything in `approvals` but the group passkey flag)."""
+    a = rules.get("approvals", {})
+    return {
+        "e2e": bool(a.get("e2e", False)),
+        "approvers": list(a.get("approvers", [])),
+        "webauthn": dict(a.get("webauthn", {"rp_id": "", "origins": []})),
+    }
+
+
+def latest_trust(session: Session) -> dict[str, Any] | None:
+    row = session.exec(select(BundleRow).order_by(col(BundleRow.version).desc()).limit(1)).first()
+    return None if row is None else trust_of(json.loads(row.body)["rules"])
 
 
 def latest(session: Session, target: str) -> dict[str, Any] | None:
@@ -121,7 +143,8 @@ def check_published(session: Session, policy: Policy, targets: Targets, target: 
     if bundle is None:
         raise PolicyUnpublished(f"no policy bundle for {target}; run `warden policy publish`")
     lockdown = bool(bundle["rules"].get("lockdown"))
-    if bundle["rules"] != compiled_for(policy, targets, target, lockdown=lockdown):
+    compiled = compiled_for(policy, targets, target, lockdown=lockdown, trust=trust_of(bundle["rules"]))
+    if bundle["rules"] != compiled:
         raise PolicyUnpublished(
             f"policy.yaml no longer matches bundle v{bundle['version']} for {target}; plans can't run until "
             "the change is published (`warden policy publish`) or reverted"

@@ -29,6 +29,7 @@ from sqlmodel import Field, Session, SQLModel, col, select
 from warden import audit
 from warden.errors import WardenError
 from warden.keys import OnlineKey
+from warden.passkeys import RelyingParty, trust_for
 from warden.plans.canonical import canonical_bytes
 from warden.plans.models import Step, StepKind
 from warden.policy.effective import effective_rules
@@ -312,22 +313,33 @@ def publish(
         raise GateFailed("the publish test gate failed:\n  " + "\n  ".join(failures))
     with Session(engine) as s:
         lock = lockdown_state(s)
+        trust = bundles.latest_trust(s)  # approval trust only changes through publish_trust
     rules_for = {
-        t.name: bundles.compiled_for(policy, targets, t.name, lockdown=lock) for t in targets.targets
+        t.name: bundles.compiled_for(policy, targets, t.name, lockdown=lock, trust=trust)
+        for t in targets.targets
     }
     return _publish_rules(
         engine, rules_for, online=online, approval=approval, now=now, actor=actor, reason="publish"
     )
 
 
-def _latest_rules(engine: Engine, *, lockdown: bool) -> dict[str, dict[str, Any]]:
+def _latest_rules(
+    engine: Engine, *, lockdown: bool | None = None, trust: dict[str, Any] | None = None
+) -> dict[str, dict[str, Any]]:
+    """Every target's published rules, with lockdown and/or the approval trust replaced."""
     with Session(engine) as s:
         names = sorted(set(s.exec(select(bundles.BundleRow.target)).all()))
         out = {}
         for name in names:
             b = bundles.latest(s, name)
-            if b is not None:
-                out[name] = {**b["rules"], "lockdown": lockdown}
+            if b is None:
+                continue
+            rules = dict(b["rules"])
+            if lockdown is not None:
+                rules["lockdown"] = lockdown
+            if trust is not None:
+                rules["approvals"] = {"passkey": rules["approvals"]["passkey"], **trust}
+            out[name] = rules
     if not out:
         raise PublishRefused("nothing is published yet; run `warden policy publish` first")
     return out
@@ -367,6 +379,54 @@ def lift(
         actor=actor,
         reason="lockdown_lift",
     )
+
+
+def publish_trust(
+    engine: Engine,
+    trust: dict[str, Any],
+    *,
+    online: OnlineKey,
+    approval: ApprovalKey,
+    now: datetime,
+    actor: str,
+) -> PublishResult:
+    """Ship a new approval trust (e2e flag, approver passkeys, WebAuthn RP) with the current rules.
+
+    Turning e2e on, removing an approver or an origin tightens and goes out at once. Adding an approver,
+    turning e2e off or changing the RP loosens and waits for the offline key (README 17.3 Settings, D-12).
+    """
+    if trust["e2e"] and not trust["approvers"]:
+        raise PublishRefused("end-to-end signing needs at least one registered passkey", code="no_approvers")
+    return _publish_rules(
+        engine,
+        _latest_rules(engine, trust=trust),
+        online=online,
+        approval=approval,
+        now=now,
+        actor=actor,
+        reason="trust",
+    )
+
+
+def publish_trust_if_changed(
+    engine: Engine,
+    rp: RelyingParty,
+    *,
+    e2e: bool | None,
+    online: OnlineKey,
+    approval: ApprovalKey,
+    now: datetime,
+    actor: str,
+) -> PublishResult | None:
+    """After a passkey is added or removed, or e2e is toggled: publish the new trust if it differs."""
+    with Session(engine) as s:
+        current = bundles.latest_trust(s)
+    if current is None:
+        return None
+    trust = trust_for(engine, rp, e2e=current["e2e"] if e2e is None else e2e)
+    if trust == current:
+        return None
+    return publish_trust(engine, trust, online=online, approval=approval, now=now, actor=actor)
 
 
 def pending_items(row: PendingRow) -> list[dict[str, Any]]:

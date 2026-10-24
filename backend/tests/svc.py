@@ -43,6 +43,7 @@ class World:
     policy: Policy = field(default_factory=fixture_policy)
     version: int = 1
     lockdown: bool = False
+    e2e: bool = False
     panel: Panel | None = None
     _svc: PlanService | None = None
 
@@ -53,6 +54,7 @@ class World:
             settings=Settings(),
             policy_version=self.version,
             lockdown=self.lockdown,
+            e2e=self.e2e,
         )
 
     @property

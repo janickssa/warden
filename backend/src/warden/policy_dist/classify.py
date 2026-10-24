@@ -24,7 +24,8 @@ _SET_FIELDS: dict[str, Literal["deny", "allow"]] = {
     "http_check_hosts": "allow",
     "workspace_roots": "allow",
 }
-_FLAGS = ("approvals.passkey", "gatekeepers.unanimous", "lockdown")
+_FLAGS = ("approvals.passkey", "approvals.e2e", "gatekeepers.unanimous", "lockdown")
+_APPROVALS_KNOWN = {"passkey", "e2e", "approvers", "webauthn"}
 _KNOWN = {
     "schema",
     "target",
@@ -149,6 +150,28 @@ def classify_rules(old: dict[str, Any], new: dict[str, Any]) -> list[Change]:
         [d["path"] for d in _get(new, "read_only.deny_paths") or []],
         "deny",
     )
+
+    oa, na = dict(old.get("approvals") or {}), dict(new.get("approvals") or {})
+    for key in sorted((set(oa) | set(na)) - _APPROVALS_KNOWN):
+        if oa.get(key) != na.get(key):
+            out.append(Change(f"approvals.{key}", "change", "loosen", "unknown field"))
+    out += _set_diff(
+        "approvals.approvers",
+        [f"{a.get('credential_id')}={a.get('alg')}:{a.get('public')}" for a in oa.get("approvers") or []],
+        [f"{a.get('credential_id')}={a.get('alg')}:{a.get('public')}" for a in na.get("approvers") or []],
+        "allow",
+    )
+    ow, nw = dict(oa.get("webauthn") or {}), dict(na.get("webauthn") or {})
+    if ow.get("rp_id") != nw.get("rp_id"):
+        out.append(
+            Change("approvals.webauthn.rp_id", "change", "loosen", f"{ow.get('rp_id')} → {nw.get('rp_id')}")
+        )
+    out += _set_diff(
+        "approvals.webauthn.origins", list(ow.get("origins") or []), list(nw.get("origins") or []), "allow"
+    )
+    for key in sorted((set(ow) | set(nw)) - {"rp_id", "origins"}):
+        if ow.get(key) != nw.get(key):
+            out.append(Change(f"approvals.webauthn.{key}", "change", "loosen", "unknown field"))
 
     for flag in _FLAGS:
         a, b = bool(_get(old, flag)), bool(_get(new, flag))

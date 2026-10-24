@@ -14,6 +14,8 @@ import (
 
 	"github.com/janickssa/warden/agent/internal/bundle"
 	"github.com/janickssa/warden/agent/internal/canonical"
+	"github.com/janickssa/warden/agent/internal/policy"
+	"github.com/janickssa/warden/agent/internal/webauthn"
 )
 
 type vectors struct {
@@ -72,7 +74,7 @@ func reencode(t *testing.T, v any) json.RawMessage {
 
 func TestPythonApprovedPlanVerifies(t *testing.T) {
 	run, keys, _ := setup(t)
-	tpl, err := Verify(run, keys, "dev", t0.Add(time.Minute))
+	tpl, err := Verify(run, keys, policy.Approvals{}, "dev", t0.Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +88,7 @@ func TestTamperedStepRefused(t *testing.T) {
 	tpl := generic["template"].(map[string]any)
 	tpl["steps"].([]any)[1].(map[string]any)["command"] = "npm publish"
 	run.Template = reencode(t, tpl)
-	if _, err := Verify(run, keys, "dev", t0); code(err) != "hash_mismatch" {
+	if _, err := Verify(run, keys, policy.Approvals{}, "dev", t0); code(err) != "hash_mismatch" {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -106,21 +108,21 @@ func TestTamperedHashAndSignatureRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	run.PlanHash, run.Approval.Hash = h, h
-	if _, err := Verify(run, keys, "dev", t0); code(err) != "bad_signature" {
+	if _, err := Verify(run, keys, policy.Approvals{}, "dev", t0); code(err) != "bad_signature" {
 		t.Fatalf("got %v", err)
 	}
 }
 
 func TestRetargetedPlanRefused(t *testing.T) {
 	run, keys, _ := setup(t)
-	if _, err := Verify(run, keys, "dev2", t0); code(err) != "wrong_target" {
+	if _, err := Verify(run, keys, policy.Approvals{}, "dev2", t0); code(err) != "wrong_target" {
 		t.Fatalf("got %v", err)
 	}
 }
 
 func TestExpiredRefused(t *testing.T) {
 	run, keys, _ := setup(t)
-	if _, err := Verify(run, keys, "dev", t0.Add(30*time.Minute)); code(err) != "expired" {
+	if _, err := Verify(run, keys, policy.Approvals{}, "dev", t0.Add(30*time.Minute)); code(err) != "expired" {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -128,7 +130,7 @@ func TestExpiredRefused(t *testing.T) {
 func TestUnknownKeyRefused(t *testing.T) {
 	run, _, _ := setup(t)
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
-	if _, err := Verify(run, map[string]ed25519.PublicKey{"ed25519:other": pub}, "dev", t0); code(err) != "unknown_key" {
+	if _, err := Verify(run, map[string]ed25519.PublicKey{"ed25519:other": pub}, policy.Approvals{}, "dev", t0); code(err) != "unknown_key" {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -137,17 +139,17 @@ func TestForgedSignatureRefused(t *testing.T) {
 	run, keys, _ := setup(t)
 	_, priv, _ := ed25519.GenerateKey(rand.Reader)
 	run.Approval.Signature.Sig = "ed25519:" + encodeSig(ed25519.Sign(priv, []byte("anything")))
-	if _, err := Verify(run, keys, "dev", t0); code(err) != "bad_signature" {
+	if _, err := Verify(run, keys, policy.Approvals{}, "dev", t0); code(err) != "bad_signature" {
 		t.Fatalf("got %v", err)
 	}
 	run2, keys2, _ := setup(t)
 	run2.Approval.ExpiresAt = "2027-01-01T00:00:00+00:00" // extend the window: signature no longer matches
-	if _, err := Verify(run2, keys2, "dev", t0); code(err) != "bad_signature" {
+	if _, err := Verify(run2, keys2, policy.Approvals{}, "dev", t0); code(err) != "bad_signature" {
 		t.Fatalf("got %v", err)
 	}
 	run3, keys3, _ := setup(t)
 	run3.Approval.Signature.By = "passkey:mallory"
-	if _, err := Verify(run3, keys3, "dev", t0); code(err) != "bad_signature" {
+	if _, err := Verify(run3, keys3, policy.Approvals{}, "dev", t0); code(err) != "bad_signature" {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -157,9 +159,21 @@ func TestUnknownTemplateFieldRefused(t *testing.T) {
 	tpl := generic["template"].(map[string]any)
 	tpl["shell"] = true
 	run.Template = reencode(t, tpl)
-	if _, err := Verify(run, keys, "dev", t0); err == nil {
+	if _, err := Verify(run, keys, policy.Approvals{}, "dev", t0); err == nil {
 		t.Fatal("accepted")
 	}
 }
 
 func encodeSig(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
+
+func TestE2ERequiresPasskey(t *testing.T) {
+	run, keys, _ := setup(t)
+	trust := policy.Approvals{E2E: true, WebAuthn: policy.WebAuthn{RPID: "warden.example.dk", Origins: []string{"https://warden.example.dk"}}}
+	if _, err := Verify(run, keys, trust, "dev", t0.Add(time.Minute)); code(err) != "passkey_required" {
+		t.Fatalf("got %v", err)
+	}
+	run.Approval.Passkey = &webauthn.Assertion{CredentialID: "nope", AuthenticatorData: "AA", ClientDataJSON: "AA", Signature: "AA"}
+	if _, err := Verify(run, keys, policy.Approvals{}, "dev", t0.Add(time.Minute)); code(err) != "bad_passkey" {
+		t.Fatalf("a bad passkey must be refused even with e2e off, got %v", err)
+	}
+}

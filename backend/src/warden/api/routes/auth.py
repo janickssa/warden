@@ -8,8 +8,10 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from warden.actors import HumanActor
 from warden.api.auth import COOKIE, COOKIE_MAX_AGE, Ctx, Guard, Human, SessionDep, session
-from warden.passkeys import PasskeyRefused, Purpose
+from warden.api.routes.settings import publish_trust_now
+from warden.passkeys import PasskeyRefused, Purpose, actor_id
 
 router = APIRouter(tags=["auth"])
 
@@ -95,9 +97,15 @@ def register_options(body: RegisterOptionsIn, request: Request, c: Ctx) -> Optio
 
 
 @router.post("/passkeys/register", dependencies=[Guard])
-def register(body: CredentialIn, c: Ctx) -> dict[str, str]:
+async def register(body: CredentialIn, c: Ctx) -> dict[str, str]:
+    """Registers the passkey for sign-in at once. Agents learn it as an approver through a publish that
+    adds an approver, which loosens and so waits for the offline key (README 17.3 Settings)."""
     row = c.passkeys.register(body.challenge_id, body.credential, now=c.now())
-    return {"credential_id": row.credential_id, "name": row.name}
+    r = await publish_trust_now(c, HumanActor("dashboard", actor_id(row.name)))
+    out = {"credential_id": row.credential_id, "name": row.name}
+    if r is not None:
+        out["approvers"] = f"{r.outcome} v{r.version}"
+    return out
 
 
 @router.post("/confirm/options")

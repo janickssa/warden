@@ -152,7 +152,7 @@ func intp(n int) *int { return &n }
 
 // Run verifies and executes one plan, reporting everything to sink.
 func (r *Runner) Run(ctx context.Context, run approval.Run, sink Sink, ctl *Control) {
-	tpl, err := approval.Verify(run, r.ApprovalKeys, r.Target, r.Now())
+	tpl, err := approval.Verify(run, r.ApprovalKeys, r.Rules.Approvals, r.Target, r.Now())
 	if err != nil {
 		var ae *approval.Error
 		code := "bad_plan"

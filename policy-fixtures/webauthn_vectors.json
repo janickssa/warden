@@ -1,0 +1,53 @@
+{
+ "cases": [
+  {
+   "alg": -7,
+   "approver": {
+    "alg": -7,
+    "credential_id": "q532hDL-S17-ojcVVIT_DA",
+    "name": "key-7",
+    "public": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzpmlNbl6ODaW615P2X-ccsBKunf_XTU1HzF8DBCHOEs-d7tXE1V1hb2rwXKgi3XJ4dE3fTBgDkO4UJJiNt7VAA"
+   },
+   "assertion": {
+    "authenticator_data": "kreU3B6rEIaamivv2w6e2kLOHKhxllql9piwbE8NlM4FAAAAAQ",
+    "client_data_json": "eyJ0eXBlIjogIndlYmF1dGhuLmdldCIsICJjaGFsbGVuZ2UiOiAiT213dVhoQlExOURacnVLdGhONUpsaWoyTVhudExpSEZwNmZ4N2FVS0dRQSIsICJvcmlnaW4iOiAiaHR0cHM6Ly93YXJkZW4uZXhhbXBsZS5kayIsICJjcm9zc09yaWdpbiI6IGZhbHNlfQ",
+    "credential_id": "q532hDL-S17-ojcVVIT_DA",
+    "signature": "MEQCIDXQO4-c_edN2ncRuHVbXTWFW2EPCn7mlSGOq9Z2fCmUAiBDjBtQXGXm-yzAyoz-adX2NYvVf2EeMsalrufKdTby8g"
+   },
+   "cose": "pQECAyYgASFYIM6ZpTW5ejg2luteT9l_nHLASrp3_101NR8xfAwQhzhLIlggPne7VxNVdYW9q8FyoIt1yeHRN30wYA5DuFCSYjbe1QA"
+  },
+  {
+   "alg": -8,
+   "approver": {
+    "alg": -8,
+    "credential_id": "CuV267AXaKlxEksEgsGCbw",
+    "name": "key-8",
+    "public": "MCowBQYDK2VwAyEAqxZ15EsUjFZVZ2JqvlelZlZkbJ_3YJ3SGOfJJ9wOdxA"
+   },
+   "assertion": {
+    "authenticator_data": "kreU3B6rEIaamivv2w6e2kLOHKhxllql9piwbE8NlM4FAAAAAQ",
+    "client_data_json": "eyJ0eXBlIjogIndlYmF1dGhuLmdldCIsICJjaGFsbGVuZ2UiOiAiT213dVhoQlExOURacnVLdGhONUpsaWoyTVhudExpSEZwNmZ4N2FVS0dRQSIsICJvcmlnaW4iOiAiaHR0cHM6Ly93YXJkZW4uZXhhbXBsZS5kayIsICJjcm9zc09yaWdpbiI6IGZhbHNlfQ",
+    "credential_id": "CuV267AXaKlxEksEgsGCbw",
+    "signature": "2wfubn8qZU2x0MBFxXqxnpKt-LN3hTCY6-Fg9e2_Iu-nvOdGAJd8Jn8a_Q7RgaX7NQXbUYr0fgTAtV2eXpHJDw"
+   },
+   "cose": "pAEBAycgBiFYIKsWdeRLFIxWVWdiar5XpWZWZGyf92Cd0hjnySfcDncQ"
+  }
+ ],
+ "challenge": "OmwuXhBQ19DZruKthN5Jlij2MXntLiHFp6fx7aUKGQA",
+ "message": "warden-approval-v1\n{\"approved_at\":\"2026-10-20T12:00:00+00:00\",\"by\":\"dashboard:MacBook\",\"expires_at\":\"2026-10-20T12:30:00+00:00\",\"plan_hash\":\"sha256:abababababababababababababababababababababababababababababababab\",\"plan_id\":\"pln_01JB7Q3K0000000000000000AA\",\"target\":\"dev\",\"v\":1}",
+ "payload": {
+  "approved_at": "2026-10-20T12:00:00+00:00",
+  "by": "dashboard:MacBook",
+  "expires_at": "2026-10-20T12:30:00+00:00",
+  "plan_hash": "sha256:abababababababababababababababababababababababababababababababab",
+  "plan_id": "pln_01JB7Q3K0000000000000000AA",
+  "target": "dev",
+  "v": 1
+ },
+ "webauthn": {
+  "origins": [
+   "https://warden.example.dk"
+  ],
+  "rp_id": "warden.example.dk"
+ }
+}

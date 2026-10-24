@@ -405,6 +405,12 @@ class ConfirmIn(In):
     credential: dict[str, Any]
 
 
+class E2EIn(In):
+    enabled: bool
+    challenge_id: str = Field(max_length=64)
+    credential: dict[str, Any]
+
+
 class SettingsIn(In):
     changes: dict[str, Any]
 

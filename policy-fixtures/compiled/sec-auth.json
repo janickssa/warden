@@ -48,7 +48,13 @@
     "dev-*"
   ],
   "approvals": {
-    "passkey": true
+    "approvers": [],
+    "e2e": false,
+    "passkey": true,
+    "webauthn": {
+      "origins": [],
+      "rp_id": ""
+    }
   },
   "denied_containers": [
     "prod-*",

@@ -66,14 +66,33 @@ type Rules struct {
 		Group     *string        `json:"group"`
 		DenyPaths []ReadOnlyDeny `json:"deny_paths"`
 	} `json:"read_only"`
-	Approvals struct {
-		Passkey bool `json:"passkey"`
-	} `json:"approvals"`
+	Approvals   Approvals `json:"approvals"`
 	Gatekeepers struct {
 		Unanimous bool `json:"unanimous"`
 	} `json:"gatekeepers"`
 	Groups   []string `json:"groups"`
 	Lockdown bool     `json:"lockdown"`
+}
+
+// Approvals is the approval trust shipped in signed bundles (README 10.0, D-12): with E2E on, every approval
+// must carry a WebAuthn assertion from one of Approvers, for the relying party and an origin listed here.
+type Approvals struct {
+	Passkey   bool       `json:"passkey"`
+	E2E       bool       `json:"e2e"`
+	Approvers []Approver `json:"approvers"`
+	WebAuthn  WebAuthn   `json:"webauthn"`
+}
+
+type Approver struct {
+	CredentialID string `json:"credential_id"`
+	Alg          int    `json:"alg"`    // -7 ES256, -8 EdDSA
+	Public       string `json:"public"` // base64url DER SubjectPublicKeyInfo
+	Name         string `json:"name"`
+}
+
+type WebAuthn struct {
+	RPID    string   `json:"rp_id"`
+	Origins []string `json:"origins"`
 }
 
 const RulesSchema = 1

@@ -83,11 +83,12 @@ def preview_text(c: ApiContext, text: str, by: str, *, note: str | None = None) 
     failures = publishing.run_gate(policy, cfg.targets)
     with Session(c.engine) as s:
         lock = publishing.lockdown_state(s)
+        trust = bundles.latest_trust(s)  # publishing policy never changes the approval trust
         approval_keys = bundles.approval_key_refs(c.approval)
         rows = []
         for t in cfg.targets.targets:
             new = {
-                "rules": bundles.compiled_for(policy, cfg.targets, t.name, lockdown=lock),
+                "rules": bundles.compiled_for(policy, cfg.targets, t.name, lockdown=lock, trust=trust),
                 "approval_keys": approval_keys,
             }
             prev = bundles.latest(s, t.name)
@@ -168,7 +169,7 @@ def get_policy(c: Ctx, _: Human) -> sc.PolicyView:
             b = bundles.latest(s, t.name)
             compiled[t.name] = b["rules"] if b else None
             if b is None or b["rules"] != bundles.compiled_for(
-                cfg.policy, cfg.targets, t.name, lockdown=facts.lockdown
+                cfg.policy, cfg.targets, t.name, lockdown=facts.lockdown, trust=bundles.trust_of(b["rules"])
             ):
                 unpublished = True
     rollout = [
@@ -234,7 +235,7 @@ def _write_atomic(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 
-def _result(r: publishing.PublishResult, reloaded: dict[str, Any] | None) -> sc.PublishResultView:
+def result_view(r: publishing.PublishResult, reloaded: dict[str, Any] | None) -> sc.PublishResultView:
     return sc.PublishResultView(
         outcome=r.outcome,
         version=r.version,
@@ -276,7 +277,7 @@ async def publish(body: sc.PublishIn, c: Ctx, human: Human) -> sc.PublishResultV
         _write_atomic(path, old)
         raise
     reloaded = await c.reload()
-    return _result(r, reloaded)
+    return result_view(r, reloaded)
 
 
 @router.get("/policy/pending/file")
@@ -290,7 +291,7 @@ def pending_file(c: Ctx, _: Human) -> JSONResponse:
 @router.post("/policy/pending/signature")
 async def upload_signature(body: sc.SignatureIn, c: Ctx, human: Human) -> sc.PublishResultView:
     r = publishing.sign_upload(c.engine, body.content, now=c.now(), actor=human.label)
-    return _result(r, await c.reload())
+    return result_view(r, await c.reload())
 
 
 @router.post("/policy/pending/discard")
@@ -305,13 +306,13 @@ async def lockdown(c: Ctx, human: Human) -> sc.PublishResultView:
     r = publishing.lockdown(c.engine, online=c.online, approval=c.approval, now=c.now(), actor=human.label)
     for p in c.plans.list_plans(statuses=(PlanStatus.APPROVED,)):
         c.plans.hold(p.id, "lockdown")
-    return _result(r, await c.reload())
+    return result_view(r, await c.reload())
 
 
 @router.post("/lockdown/lift")
 async def lift(c: Ctx, human: Human) -> sc.PublishResultView:
     r = publishing.lift(c.engine, online=c.online, approval=c.approval, now=c.now(), actor=human.label)
-    return _result(r, await c.reload())
+    return result_view(r, await c.reload())
 
 
 # --- groups (README 7B) -------------------------------------------------------------------------------

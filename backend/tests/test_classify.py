@@ -20,6 +20,7 @@ from warden.policy_dist.classify import classify
 from warden.policy_dist.compile import compile_rules
 
 KEY = {"key_id": "ed25519:aaaa", "public": "AAAA"}
+APPROVER = {"credential_id": "cred-1", "alg": -7, "public": "MFkw-spki", "name": "MacBook"}
 
 
 def base() -> dict[str, Any]:
@@ -68,6 +69,16 @@ MUTATIONS: list[tuple[str, Callable[[dict[str, Any]], object], str]] = [
         "tighten",
     ),
     ("passkey on", lambda r: r["approvals"].update(passkey=True), "tighten"),
+    ("e2e on", lambda r: r["approvals"].update(e2e=True), "tighten"),
+    ("add approver", lambda r: r["approvals"]["approvers"].append(dict(APPROVER)), "loosen"),
+    ("change rp id", lambda r: r["approvals"]["webauthn"].update(rp_id="evil.example.com"), "loosen"),
+    (
+        "add origin",
+        lambda r: r["approvals"]["webauthn"]["origins"].append("https://evil.example.com"),
+        "loosen",
+    ),
+    ("unknown approvals field", lambda r: r["approvals"].update(surprise=True), "loosen"),
+    ("unknown webauthn field", lambda r: r["approvals"]["webauthn"].update(surprise=True), "loosen"),
     ("unanimous on", lambda r: r["gatekeepers"].update(unanimous=True), "tighten"),
     ("lockdown on", lambda r: r.update(lockdown=True), "tighten"),
     ("add workspace root", lambda r: r["workspace_roots"].append("/srv/other"), "loosen"),
@@ -131,13 +142,24 @@ def make_vectors() -> list[dict[str, Any]]:
     out = []
     for name, fn, expected in MUTATIONS:
         old, new = base(), edit(fn)
-        if name in ("unknown field in program", "unknown top-level field"):
+        if name in (
+            "unknown field in program",
+            "unknown top-level field",
+            "unknown approvals field",
+            "unknown webauthn field",
+        ):
             continue  # the agent's strict decoder refuses these outright
         out.append({"name": name, "old": old, "new": new, "expected": expected})
     keys = base()
     keys["approval_keys"].append({"key_id": "ed25519:bbbb", "public": "BBBB"})
     out.append({"name": "add approval key", "old": base(), "new": keys, "expected": "loosen"})
     out.append({"name": "remove approval key", "old": keys, "new": base(), "expected": "tighten"})
+    with_approver = edit(lambda r: r["approvals"]["approvers"].append(dict(APPROVER)))
+    out.append({"name": "remove approver", "old": with_approver, "new": base(), "expected": "tighten"})
+    swapped = edit(lambda r: r["approvals"]["approvers"].append({**APPROVER, "public": "OTHER"}))
+    out.append({"name": "swap approver key", "old": with_approver, "new": swapped, "expected": "loosen"})
+    with_origin = edit(lambda r: r["approvals"]["webauthn"]["origins"].append("https://warden.example.dk"))
+    out.append({"name": "remove origin", "old": with_origin, "new": base(), "expected": "tighten"})
     return copy.deepcopy(out)
 
 

@@ -110,6 +110,12 @@ func Classify(oldR, newR *policy.Rules, oldKeys, newKeys []KeyRef) (string, []st
 		}
 	}
 	flag("approvals.passkey", oldR.Approvals.Passkey, newR.Approvals.Passkey)
+	flag("approvals.e2e", oldR.Approvals.E2E, newR.Approvals.E2E)
+	setDiff("approvals.approvers", approverStrings(oldR), approverStrings(newR), false)
+	if oldR.Approvals.WebAuthn.RPID != newR.Approvals.WebAuthn.RPID {
+		add("loosen", "approvals.webauthn.rp_id %s → %s", oldR.Approvals.WebAuthn.RPID, newR.Approvals.WebAuthn.RPID)
+	}
+	setDiff("approvals.webauthn.origins", oldR.Approvals.WebAuthn.Origins, newR.Approvals.WebAuthn.Origins, false)
 	flag("gatekeepers.unanimous", oldR.Gatekeepers.Unanimous, newR.Gatekeepers.Unanimous)
 	flag("lockdown", oldR.Lockdown, newR.Lockdown)
 
@@ -123,6 +129,14 @@ func Classify(oldR, newR *policy.Rules, oldKeys, newKeys []KeyRef) (string, []st
 	default:
 		return "tighten", changes
 	}
+}
+
+func approverStrings(r *policy.Rules) []string {
+	out := make([]string, 0, len(r.Approvals.Approvers))
+	for _, a := range r.Approvals.Approvers {
+		out = append(out, fmt.Sprintf("%s=%d:%s", a.CredentialID, a.Alg, a.Public))
+	}
+	return out
 }
 
 func strp(s *string) string {

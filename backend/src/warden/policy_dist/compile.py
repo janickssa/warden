@@ -14,12 +14,20 @@ from warden.policy.schema import Target
 
 RULES_SCHEMA = 1
 
+# The approval trust agents enforce (README 10.0, D-12): end-to-end signing, the passkeys allowed to approve,
+# and the WebAuthn relying party and origins their assertions must name. Not derived from policy.yaml: it is
+# set by trust publishes (passkey added/removed, e2e toggled) and carried over by every other publish.
+DEFAULT_TRUST: dict[str, Any] = {"e2e": False, "approvers": [], "webauthn": {"rp_id": "", "origins": []}}
+
 
 def _limit(v: LimitValue) -> dict[str, Any]:
     return {"value": v.value, "group": v.group}
 
 
-def compile_rules(rules: EffectiveRules, target: Target) -> dict[str, Any]:
+def compile_rules(
+    rules: EffectiveRules, target: Target, trust: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    t = trust if trust is not None else DEFAULT_TRUST
     return {
         "schema": RULES_SCHEMA,
         "target": rules.target,
@@ -48,7 +56,12 @@ def compile_rules(rules: EffectiveRules, target: Target) -> dict[str, Any]:
             "group": rules.read_only_mode_group,
             "deny_paths": [{"path": p, "group": g} for p, g in rules.read_only_deny_paths],
         },
-        "approvals": {"passkey": rules.passkey},
+        "approvals": {
+            "passkey": rules.passkey,
+            "e2e": bool(t["e2e"]),
+            "approvers": [dict(a) for a in t["approvers"]],
+            "webauthn": {"rp_id": t["webauthn"]["rp_id"], "origins": list(t["webauthn"]["origins"])},
+        },
         "gatekeepers": {"unanimous": rules.unanimous},
         "groups": list(rules.groups),
         "lockdown": rules.lockdown,

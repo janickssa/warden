@@ -1,10 +1,12 @@
 // Package approval verifies a plan sent by Warden before anything runs (invariants 2, 3 and 10):
-// the template's canonical hash, the approved hash, the target, the approval signature and its window.
+// the template's canonical hash, the approved hash, the target, the approval signature and its window, and,
+// with approvals.e2e on, a passkey assertion over the same approval from an approver in the bundle.
 package approval
 
 import (
 	"bytes"
 	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/janickssa/warden/agent/internal/bundle"
 	"github.com/janickssa/warden/agent/internal/canonical"
 	"github.com/janickssa/warden/agent/internal/policy"
+	"github.com/janickssa/warden/agent/internal/webauthn"
 )
 
 const (
@@ -34,11 +37,12 @@ type Signature struct {
 }
 
 type Approval struct {
-	By        string    `json:"by"`
-	At        string    `json:"at"`
-	ExpiresAt string    `json:"expires_at"`
-	Hash      string    `json:"hash"`
-	Signature Signature `json:"signature"`
+	By        string              `json:"by"`
+	At        string              `json:"at"`
+	ExpiresAt string              `json:"expires_at"`
+	Hash      string              `json:"hash"`
+	Signature Signature           `json:"signature"`
+	Passkey   *webauthn.Assertion `json:"passkey"`
 }
 
 // Run is the `run` message body.
@@ -59,7 +63,7 @@ type Template struct {
 }
 
 // Verify returns the template if every check passes.
-func Verify(run Run, keys map[string]ed25519.PublicKey, ownTarget string, now time.Time) (*Template, error) {
+func Verify(run Run, keys map[string]ed25519.PublicKey, trust policy.Approvals, ownTarget string, now time.Time) (*Template, error) {
 	generic, err := canonical.Decode(run.Template)
 	if err != nil {
 		return nil, refuse("bad_template", "%v", err)
@@ -104,9 +108,19 @@ func Verify(run Run, keys map[string]ed25519.PublicKey, ownTarget string, now ti
 	if err != nil {
 		return nil, refuse("bad_signature", "%v", err)
 	}
+	message := append([]byte(domain), body...)
 	raw, err := bundle.DecodeSig(a.Signature.Sig)
-	if err != nil || !ed25519.Verify(pub, append([]byte(domain), body...), raw) {
+	if err != nil || !ed25519.Verify(pub, message, raw) {
 		return nil, refuse("bad_signature", "approval signature is invalid")
+	}
+	if trust.E2E && a.Passkey == nil {
+		return nil, refuse("passkey_required", "end-to-end signing is on: this approval has no passkey signature")
+	}
+	if a.Passkey != nil { // checked whenever present, so a bad one is never ignored
+		challenge := sha256.Sum256(message)
+		if _, err := webauthn.Verify(*a.Passkey, challenge[:], trust); err != nil {
+			return nil, refuse("bad_passkey", "%v", err)
+		}
 	}
 	expires, err := time.Parse(time.RFC3339Nano, a.ExpiresAt)
 	if err != nil {

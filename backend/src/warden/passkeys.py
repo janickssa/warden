@@ -477,3 +477,12 @@ def challenge_for(message: bytes) -> bytes:
 
 def client_challenge(client_data_json_b64: str) -> str:
     return str(json.loads(base64url_to_bytes(client_data_json_b64))["challenge"])
+
+
+def trust_for(engine: Engine, rp: RelyingParty, *, e2e: bool) -> dict[str, Any]:
+    """The approval trust agents should have: the e2e flag, every active passkey, this relying party."""
+    return {
+        "e2e": e2e,
+        "approvers": approver_refs(engine),
+        "webauthn": {"rp_id": rp.rp_id, "origins": [rp.origin]},
+    }

@@ -59,7 +59,13 @@
         "dev-*"
       ],
       "approvals": {
-        "passkey": false
+        "approvers": [],
+        "e2e": false,
+        "passkey": false,
+        "webauthn": {
+          "origins": [],
+          "rp_id": ""
+        }
       },
       "denied_containers": [
         "prod-*",
@@ -143,7 +149,7 @@
         "alg": "ed25519",
         "key": "online",
         "key_id": "ed25519:56475aa75463474c",
-        "sig": "ed25519:fuludjywx37QWb72pmKPEcTzF_S9Y9NvV1Vnsts3_CbMYhMVqjVQsk_qjIS8sqKp_goJayTcF_lPo_GUs93xBA"
+        "sig": "ed25519:YWDm_V_2Dke_QyJN706N5YPBNeIRBoOmC1oZns7r0pJ9SOdcp0ZlIIdwy8MRjKFh_ZwDGYkAULWj7xS6uZxzDQ"
       }
     ],
     "target": "dev",
@@ -209,7 +215,13 @@
         "dev-*"
       ],
       "approvals": {
-        "passkey": false
+        "approvers": [],
+        "e2e": false,
+        "passkey": false,
+        "webauthn": {
+          "origins": [],
+          "rp_id": ""
+        }
       },
       "denied_containers": [
         "prod-*",
@@ -293,7 +305,7 @@
         "alg": "ed25519",
         "key": "online",
         "key_id": "ed25519:56475aa75463474c",
-        "sig": "ed25519:nYDZ6LclRBR6YMLR7KVepku59Bq90v0p6GsYTWbltDoNzXWB_vvFxoIlXWmaGAEidzDgAYPe8qtKw0Yflf8WDg"
+        "sig": "ed25519:DWZAbfIEqRpBY4kmom0q1cov0Rx_Eqd3oFzuvHJ4Opko3xfbnW3b7ZzWKbU1JMLcUzEI3EB--TqOvVT8yKlJCg"
       }
     ],
     "target": "dev",

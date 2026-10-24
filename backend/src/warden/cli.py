@@ -497,6 +497,13 @@ def _passkey(home: Home, args: argparse.Namespace) -> int:
         raise WardenError(f"no single passkey named {args.name!r}", code="not_found")
     pks.remove(match[0].credential_id, actor=_human(), now=now)
     _out(f"removed {args.name}; its sessions are signed out")
+    online_key, approval = _keys(home)
+    published = publishing.publish_trust_if_changed(
+        engine, pks.rp, e2e=None, online=online_key, approval=approval, now=now, actor=_human().label
+    )
+    if published is not None:
+        _print_result(published)
+        _after_publish(home, published)
     return 0
 
 

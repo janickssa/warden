@@ -6,14 +6,18 @@ from fastapi import APIRouter
 from sqlmodel import Session
 
 from warden import settings_store
+from warden.actors import HumanActor
 from warden.api import schemas as sc
 from warden.api.auth import Ctx, Human, SessionDep
+from warden.api.context import ApiContext
+from warden.api.routes import policy as policy_routes
 from warden.config import load_settings
 from warden.errors import WardenError
 from warden.gatekeeper.config import load_gatekeeper
 from warden.passkeys import active
 from warden.policy.effective import effective_rules
 from warden.policy_dist import offline_keys
+from warden.policy_dist import publish as publishing
 
 router = APIRouter(tags=["settings"])
 
@@ -82,6 +86,26 @@ async def put_settings(body: sc.SettingsIn, c: Ctx, human: Human) -> sc.Settings
     return get_settings(c, human)
 
 
+async def publish_trust_now(
+    c: ApiContext, actor: HumanActor, *, e2e: bool | None = None
+) -> sc.PublishResultView | None:
+    """Ship the current passkeys (and e2e flag) to agents when they differ from what's published."""
+    r = publishing.publish_trust_if_changed(
+        c.engine, c.passkeys.rp, e2e=e2e, online=c.online, approval=c.approval, now=c.now(), actor=actor.label
+    )
+    return None if r is None else policy_routes.result_view(r, await c.reload())
+
+
+@router.post("/e2e")
+async def set_e2e(body: sc.E2EIn, c: Ctx, human: Human) -> sc.PublishResultView:
+    """Turn end-to-end signing on (tighten, at once) or off (loosen, waits for the offline key)."""
+    c.passkeys.verify(body.challenge_id, body.credential, "settings", "e2e", now=c.now())
+    r = await publish_trust_now(c, human, e2e=body.enabled)
+    if r is None:
+        raise WardenError("nothing to change: agents already have this", code="unchanged")
+    return r
+
+
 @router.get("/passkeys")
 def passkeys(c: Ctx, _: Human) -> list[sc.PasskeyView]:
     return [
@@ -97,10 +121,11 @@ def passkeys(c: Ctx, _: Human) -> list[sc.PasskeyView]:
 
 
 @router.post("/passkeys/{credential_id}/remove")
-def remove_passkey(credential_id: str, body: sc.ConfirmIn, c: Ctx, human: Human) -> sc.Ok:
+async def remove_passkey(credential_id: str, body: sc.ConfirmIn, c: Ctx, human: Human) -> sc.Ok:
     c.passkeys.verify(body.challenge_id, body.credential, "remove_passkey", credential_id, now=c.now())
     c.passkeys.remove(credential_id, actor=human, now=c.now())
-    return sc.Ok(message="passkey removed")
+    r = await publish_trust_now(c, human)
+    return sc.Ok(message="passkey removed" + (f" · approver list published as v{r.version}" if r else ""))
 
 
 @router.get("/sessions")
