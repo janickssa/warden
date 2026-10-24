@@ -340,6 +340,7 @@ def test_m4_dry_run(box: Box) -> None:
     import httpx2
     from mcp import Client, StdioServerParameters
     from mcp.client.streamable_http import streamable_http_client
+    from mcp.types import TextContent
 
     box.warden("init")
     box.warden("policy", "publish")
@@ -364,7 +365,8 @@ def test_m4_dry_run(box: Box) -> None:
     def data(r: Any) -> dict[str, Any]:
         assert not r.is_error, r.content
         sc = r.structured_content
-        return sc.get("result", sc) if set(sc) == {"result"} else sc
+        out: dict[str, Any] = sc.get("result", sc) if set(sc) == {"result"} else sc
+        return out
 
     def approve_later(plan_id: str) -> threading.Thread:
         def go() -> None:
@@ -456,10 +458,9 @@ def test_m4_dry_run(box: Box) -> None:
             )
             diff = data(await c.call_tool("diff_plans", {"old_id": p["plan_id"], "new_id": r["plan_id"]}))
             assert [row["op"] for row in diff["rows"]] == ["same", "removed", "added"]
-            assert (
-                "not_approved"
-                in (await c.call_tool("execute_plan", {"plan_id": r["plan_id"]})).content[0].text
-            )
+            refused = (await c.call_tool("execute_plan", {"plan_id": r["plan_id"]})).content[0]
+            assert isinstance(refused, TextContent)
+            assert "not_approved" in refused.text
             t = approve_later(r["plan_id"])
             await c.call_tool("wait_for_approval", {"plan_id": r["plan_id"], "timeout_s": 60})
             await asyncio.to_thread(t.join)

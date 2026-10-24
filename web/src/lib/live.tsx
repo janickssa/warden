@@ -66,6 +66,17 @@ export function LiveProvider({ children }: { children: React.ReactNode }) {
   }, [qc]);
 
   useEffect(() => {
+    // A failed request means Warden is unreachable even if the socket hasn't noticed yet: show it, and
+    // let the reconnect (which refetches everything) decide when it's back.
+    const onOffline = () => {
+      setOnline(false);
+      if (ws.current && ws.current.readyState <= 1) ws.current.close();
+    };
+    window.addEventListener("warden:offline", onOffline);
+    return () => window.removeEventListener("warden:offline", onOffline);
+  }, []);
+
+  useEffect(() => {
     connect();
     return () => {
       if (timer.current) clearTimeout(timer.current);

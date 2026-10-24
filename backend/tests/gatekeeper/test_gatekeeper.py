@@ -71,6 +71,7 @@ def test_secrets_scrubbed_before_any_reviewer() -> None:
     secret = "sk-live-0123456789abcdef"  # noqa: S105 - a fake value to scrub
     from warden.gatekeeper.prompt import Evidence, PreviousContext
 
+    assert case.previous is not None
     prev = PreviousContext(
         case.previous.plan, (f"key was {secret}",), (Evidence("out", f"TOKEN={secret}\n"),)
     )
@@ -180,7 +181,7 @@ STEPS = REQ.step_numbers
 
 def _reviewer(provider: str, handler: Any, secrets: Secrets, **kw: Any) -> Any:
     key = {"openai": "secret:OPENAI_API_KEY", "anthropic": "secret:ANTHROPIC_API_KEY"}.get(provider)
-    cfg = ReviewerConfig(name="r", provider=provider, model="m", api_key=key, **kw)  # type: ignore[arg-type]
+    cfg = ReviewerConfig(name="r", provider=provider, model="m", api_key=key, **kw)
     return make_reviewer(cfg, secrets, timeout_s=5, transport=httpx2.MockTransport(handler))
 
 

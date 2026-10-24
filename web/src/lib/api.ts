@@ -11,6 +11,12 @@ export class Offline extends Error {
   name = "Offline";
 }
 
+/** Tells the live connection a request couldn't reach Warden, so the offline banner shows at once. */
+function offline(): Offline {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("warden:offline"));
+  return new Offline("Can’t reach Warden");
+}
+
 type Method = "GET" | "POST" | "PUT";
 
 export async function api<T>(path: string, opts: { method?: Method; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
@@ -27,9 +33,9 @@ export async function api<T>(path: string, opts: { method?: Method; body?: unkno
     });
   } catch (e) {
     if ((e as Error).name === "AbortError") throw e;
-    throw new Offline("Can’t reach Warden");
+    throw offline();
   }
-  if (res.status === 502 || res.status === 503 || res.status === 504) throw new Offline("Can’t reach Warden");
+  if (res.status === 502 || res.status === 503 || res.status === 504) throw offline();
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {

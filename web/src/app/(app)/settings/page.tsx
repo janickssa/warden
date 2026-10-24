@@ -124,7 +124,7 @@ function Editor({ s }: { s: SettingsView }) {
         : [t("All changes saved."), "var(--color-neutral-400)"];
 
   return (
-    <Page max={860} className="has-actionbar" style={{ paddingBottom: 0, gap: "var(--space-8)" }}>
+    <Page max={860} className="has-actionbar" style={{ gap: "var(--space-8)" }}>
       <Header title={t("Settings")} sub={t("Every change is written to the audit log with its before and after values. Claude can’t read or change these.")} />
 
       <Section title={t("Retention")} desc={t("How long history is kept. Pruned ranges leave a signed checkpoint, so the hash chain still verifies.")}>

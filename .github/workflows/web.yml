@@ -1,0 +1,43 @@
+name: web
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+        working-directory: backend
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      # Generated files must match their sources: design tokens and the API types from the OpenAPI schema.
+      - run: node scripts/gen-tokens.mjs --check
+      - run: pnpm api-types --check
+        working-directory: web
+      - run: pnpm typecheck
+        working-directory: web
+      - run: node scripts/check-i18n.mjs
+        working-directory: web
+      - run: node scripts/no-hex.mjs
+        working-directory: web
+      - run: pnpm audit --prod
+        working-directory: web
+      - run: pnpm build
+        working-directory: web
+      # The browser suite runs the real `warden serve` behind scripts/proxy.mjs.
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: web
+      - run: pnpm test:e2e
+        working-directory: web

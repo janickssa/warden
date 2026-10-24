@@ -38,7 +38,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 | M3 ☑ | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_policy_distribution.py` (5 agents, timed) and `test_cli_daemon.py::test_m3_dry_run`, plus classifier property tests; manual run in `docs/m3-demo.md` |
 | M4 ☑ | MCP | MCPServer tools (§6 + `post_diagnosis`), Streamable HTTP + stdio bridge, MCP client tokens (elicitation moved to M6, M4-03) | Works end-to-end from Claude Code over WireGuard | `test_cli_daemon.py::test_m4_dry_run` (real HTTP, real agent) + manual Claude Code session in `docs/m4-demo.md` |
 | M5 ◐ | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
-| M6 ◐ | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | Playwright suite (states from §17.6 per page) + manual check over VPN |
+| M6 ☑ | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | `web/e2e/dashboard.spec.ts` (real `warden serve`, virtual passkey) + manual check over VPN in `docs/m6-demo.md` |
 | M7 | Schedules | Templates, APScheduler cron, expiry, pause/resume, failure notify | Nightly job runs and reports | Time-travel scheduler test + one real nightly run |
 | M8 | iPhone app | SwiftUI app, `WardenCore` package, APNs, Face ID, lockdown, approve with edits | Approve from the lock screen | `swift test` on Linux (WardenCore + view models) + TestFlight manual check |
 | M9 | Public MCP | Public NPM host for `/mcp` only, OAuth | Works from the Claude app without VPN | **Ask before starting** (OAuth design choice, §18) |
@@ -736,6 +736,36 @@ Started 24.10.2026 while M5's live run waits on the owner's Ollama setup (M5 sta
 4. `web: tokens, shell, pages`
 5. `test: Playwright`
 6. `docs: M6 checklist, README, decisions`
+
+### M6 result ☑ (24.10.2026)
+
+The Done-when "approve and publish rules from the browser" is proven by `web/e2e/dashboard.spec.ts`. It runs
+the real `warden serve`, the production Next.js build and `scripts/proxy.mjs` (NPM's part) on one localhost
+origin, with Chromium's virtual authenticator. The flow:
+- register a passkey from the `warden passkey add` link and sign in;
+- sign the approver-list bundle with a real `warden-sign` offline key and upload it on the Policy page;
+- approve a high-risk plan with the passkey;
+- publish a tightening (a loosening only offers "Create bundle for offline signing…").
+
+The same suite covers:
+- the offline state, end to end (banner, stale time, every action disabled, recovery);
+- keyboard shortcuts (no approve key);
+- bugs 1–3: the plan list highlight and back link, the phone action bar, an unavailable gatekeeper;
+- the phone-only pages, Danish, the audit chain and filter;
+- that no request leaves the origin.
+
+Bug 4 lives in the Replace offline key dialog, which arrives with the browser key flows in M10 (M6-09). The
+WireGuard + NPM + real passkey path is the manual check in `docs/m6-demo.md`.
+
+Python: unit and integration suites pass, and `mypy src tests` is clean again (16 old test-typing errors
+fixed). Go is unchanged. Web checks: typecheck, i18n (623 strings), colour literals, `pnpm audit` and build,
+all in `.github/workflows/web.yml`. Decisions: DECISIONS.md section B7 (M6-01 … M6-13) and X-16 … X-19.
+
+Differences from the plan above:
+- Elicitation is still out (M6-13); `wait_for_approval` returns the dashboard link instead.
+- Not built yet: key rotation, CA renewal and offline-key replacement in the browser, container lists, and
+  retention pruning (M6-09).
+- The policy test suite runs with every preview instead of behind a "Run tests" button (M6-06).
 
 ## M7 Schedules — outline
 Template approval → hash-pinned schedule; APScheduler (Europe/Copenhagen); default expiry 90 days;

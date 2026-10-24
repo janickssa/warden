@@ -441,3 +441,13 @@ def test_policy_form_document_preview_keeps_groups(api: Api) -> None:
     assert ok(api.post("/api/policy/preview", {"document": raised}))["cls"] == "loosen"
     assert api.post("/api/policy/preview", {}).status_code == 400
     assert api.post("/api/policy/preview", {"yaml": pol["yaml"], "document": {}}).status_code == 400
+
+
+def test_audit_kinds_filter(api: Api) -> None:
+    page = ok(api.get("/api/audit?kind=settings"))
+    assert page["entries"]
+    assert all(
+        any(w in e["action"] for w in ("setting", "passkey", "session", "signed_", "mcp_client"))
+        for e in page["entries"]
+    )
+    assert all("hash" in e and "prev" in e for e in page["entries"])

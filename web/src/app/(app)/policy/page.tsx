@@ -122,7 +122,7 @@ function PolicyEditor({ p }: { p: PolicyView }) {
 
   const current = p.rollout.filter((r) => r.current).length;
   return (
-    <Page max={1040} className="has-actionbar" style={{ paddingBottom: 0, gap: "var(--space-8)" }}>
+    <Page max={1040} className="has-actionbar" style={{ gap: "var(--space-8)" }}>
       <Header title={t("Policy")} sub={live ? t("v{v} live since {at} · compiled into a signed bundle for each agent", { v: p.version, at: fmtExact(live.at) }) : t("Not published yet")}>
         {p.lockdown ? (
           <button className="btn btn-secondary" disabled={offline || !!p.pending} onClick={() => setDialog("lift")}>

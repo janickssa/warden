@@ -66,6 +66,9 @@ button:disabled, .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .w-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 60; }
 .radio.is-disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* Pages with a sticky action bar end at the bar on desktop; the phone rule below reserves its height. */
+.w-page.has-actionbar { padding-bottom: 0; }
+
 /* Phone (README 17.3: below 768 px a single column with Approvals, Plan detail and the kill switch). */
 @media (max-width: 767px) {
   .w-page { padding: 20px 16px 32px; }

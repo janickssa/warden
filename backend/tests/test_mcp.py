@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 from mcp import Client
-from mcp.types import CallToolResult, ElicitResult
+from mcp.types import CallToolResult, ElicitResult, TextContent
 from sqlalchemy import Engine
 from sqlmodel import Session
 from svc import ALICE, World
@@ -105,8 +105,12 @@ def data(r: CallToolResult) -> dict[str, Any]:
     assert not r.is_error, r.content
     if r.structured_content is not None:
         sc = r.structured_content
-        return sc.get("result", sc) if set(sc) == {"result"} else sc
-    return json.loads(r.content[0].text)  # type: ignore[union-attr]
+        out: dict[str, Any] = sc.get("result", sc) if set(sc) == {"result"} else sc
+        return out
+    first = r.content[0]
+    assert isinstance(first, TextContent)
+    parsed: dict[str, Any] = json.loads(first.text)
+    return parsed
 
 
 def error(r: CallToolResult) -> str:
@@ -170,6 +174,7 @@ def test_propose_get_and_wait(world: World) -> None:
 
             waited = data(await c.call_tool("wait_for_approval", {"plan_id": p["plan_id"], "timeout_s": 1}))
             assert waited["decided"] is False
+            assert waited["approve_at"].endswith(f"/plans/{p['plan_id']}")
 
             async def approve_soon() -> None:
                 await asyncio.sleep(0.3)

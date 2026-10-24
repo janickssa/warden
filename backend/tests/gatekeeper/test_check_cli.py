@@ -124,9 +124,9 @@ def test_recorded_replies_replay(source: str, rec: dict[str, Any]) -> None:
         )
 
     key = {"openai": "secret:REPLAY", "anthropic": "secret:REPLAY"}.get(provider)
-    cfg = ReviewerConfig(name=source, provider=provider, model=rec["model"] or "m", api_key=key)  # type: ignore[arg-type]
+    cfg = ReviewerConfig(name=source, provider=provider, model=rec["model"] or "m", api_key=key)
     secrets = Secrets(Path("/nonexistent"))
-    secrets.get = lambda _ref: "replay"  # type: ignore[method-assign]
+    secrets.get = lambda ref: "replay"  # type: ignore[method-assign]
     req = build_request(case.plan, rules_for("dev"), case.previous, secrets={}, send_untrusted=True)
     v = make_reviewer(cfg, secrets, timeout_s=5, transport=httpx2.MockTransport(handler)).review(req)
     assert v.verdict in (Verdict.ESCALATE, Verdict.DENY), v.summary

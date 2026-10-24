@@ -52,8 +52,8 @@ class SoftAuthenticator:
 
     def _sign(self, data: bytes) -> bytes:
         if self.alg == -7:
-            return self.key.sign(data, ec.ECDSA(hashes.SHA256()))
-        return self.key.sign(data)
+            return bytes(self.key.sign(data, ec.ECDSA(hashes.SHA256())))
+        return bytes(self.key.sign(data))
 
     def create(self, options: dict[str, Any]) -> dict[str, Any]:
         rp_hash = hashlib.sha256(self.rp_id.encode()).digest()

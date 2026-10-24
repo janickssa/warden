@@ -62,7 +62,7 @@ AUDIT_KINDS: dict[str, re.Pattern[str]] = {
     "policy": re.compile(
         r"policy|agent|lockdown|step_refused|invalidat|group|read_only_refused|bundle|trust"
     ),
-    "settings": re.compile(r"settings|passkey|session|mcp_client"),
+    "settings": re.compile(r"setting|passkey|session|signed_|mcp_client"),
 }
 
 

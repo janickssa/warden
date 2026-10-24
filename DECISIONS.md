@@ -119,6 +119,24 @@ These are all stricter than or equal to the spec. Where they change README text,
 | M5-07 | Secrets | API keys live in `<config dir>/secrets/NAME` (README 12: `/etc/warden/secrets`, mode 0600, owned by the Warden user). This settles M2-05 for Warden's own keys. Secrets *inside plan steps* (`{{secret:NAME}}`) stay refused by agents until you decide where those live. |
 | M5-08 | Done-when evidence | CI proves the pipeline (prompt hygiene, the scan floor, every adapter failure, recorded-reply replay), not how a model behaves. The Done-when is `warden gatekeeper check --injection` (or `WARDEN_LIVE_CONFIG=… pytest -m live`) on your models. `--record` saves their replies to `backend/tests/gatekeeper/recorded/`, and CI replays them from then on. |
 
+## B7. Decisions made while building M6
+
+| ID | Topic | Decision |
+|---|---|---|
+| M6-01 | One port | `/api`, `/ws` and `/mcp` share `settings.http` (renamed from `settings.mcp`); NPM routes them and everything else to the Next.js server. FastAPI came back for the dashboard API (M4 had dropped it). |
+| M6-02 | Sessions | Passkey sign-in only. 12 h sessions in an httpOnly, Secure, SameSite=Strict cookie, stored hashed. Every state change needs `Origin` = `server.public_url` and `X-Warden: 1`. The UI language is a server setting, so sign-in and `/register` are English until you're signed in. |
+| M6-03 | End-to-end signing at bootstrap | Off until the approver list is published. Registering or removing a passkey republishes the list; adding an approver loosens, so it waits for the offline signature. |
+| M6-04 | Lockdown from the dashboard | Press and hold for 2 s, then a passkey (prototype). The passkey stops a stolen session from forcing a lockdown that only the offline key can lift. `warden lockdown` on the guest needs neither. The kill switch stays a single confirmed click. |
+| M6-05 | "Diagnose & propose fix…" | `POST /api/plans/{id}/diagnose` stores your note on the failed plan and audits it; `get_plan` returns it as `human_note` (D-14). Warden can't push to Claude, so Claude sees it the next time it looks at the plan. |
+| M6-06 | Policy and group editors | The form edits the known global sections; groups have their own editor. Both send structured data, and Warden writes `policy.yaml` without comments (the UI says so). The classification and the policy test suite run on every change (no separate "Run tests" button); Publish needs both to pass. |
+| M6-07 | Gatekeeper settings | Shown read-only: `gatekeeper.yaml` is the source, and it holds API key references. |
+| M6-08 | Add agent | Offers only names from `targets.yaml`; the workspace roots come from there too. |
+| M6-09 | Not built yet | Container lists (agents don't report containers), key rotation, CA renewal, replacing the offline key and registering a backup from the browser (M10; the Settings page shows the CLI), retention pruning (M10), schedules (M7), "Save as schedule" (M7). |
+| M6-10 | Output colours | ANSI SGR colours are rendered (README); every other escape is dropped. Output is only ever React text. |
+| M6-11 | Fonts | Self-hosted through `next/font/local`; the Google Fonts `@import` in the generated Nocturne CSS is stripped. A Playwright check fails on any request off the dashboard's origin. |
+| M6-12 | Dependencies | `next` 16.4.0 had three published advisories (two critical); pinned to 16.4.2 instead. |
+| M6-13 | Chat approval | Still no elicitation (M4-03 stands). While a plan waits, `wait_for_approval` returns `approve_at`, the plan's dashboard link from `server.public_url`, and `get_plan`'s `next` names it. Approving needs the dashboard, app or CLI, so invariant 3 holds without trusting the MCP client's UI. |
+
 ## C. README ↔ prototype disagreements
 
 | ID | Where | README says | Prototype does | Resolution |
@@ -138,6 +156,10 @@ These are all stricter than or equal to the spec. Where they change README text,
 | X-13 | Agent disconnect | "finishes or kills the current step (per its timeout)" | "step killed after its 60 s timeout" | Same behaviour: the running step may finish within its own timeout, after which it's killed; the remaining steps are aborted and the plan becomes `failed` with `agent_disconnected`. |
 | X-14 | Policy refusal exit code | Not specified | Shows `126` for a step the agent refused | Use 126 in the UI/audit (the conventional "cannot execute"); the reason code `policy_violation` is the authoritative field. |
 | X-15 | Repo layout | `design/screenshots/` next to `design/prototypes/` | The zip had `screenshots/` inside the prototype folder | Unpacked to README layout. `design/prototypes/_ds/` keeps a copy of Nocturne only so the prototype HTML still opens; `design/nocturne/` is the canonical copy. The original zip is untouched at the repo root. Delete it if you like. |
+| X-16 | Expired plan | Buttons disabled, "Expired at 14:45 — ask Claude to propose again" | Buttons removed, "Expired at 14:45. Ask Claude to propose again." | README behaviour (disabled buttons), prototype copy. |
+| X-17 | Plan decided elsewhere | Toast "Approved on iPhone 14:32", buttons disabled, refresh | Not implemented | README: the page updates live and toasts who decided. |
+| X-18 | Feed client filter | Live feed filters by client | Type and target only, targets hard-coded | README: a client filter, targets from the agent list. |
+| X-19 | Approve label with groups | Passkey per §10.0 and group `passkey: true` | The label ignores groups | Label comes from Warden's own passkey reasons, groups included. |
 
 ## D. Things I noticed but am not changing (FYI)
 

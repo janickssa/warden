@@ -494,7 +494,7 @@ All channels share the same plan store and get live updates through the event bu
 
 Uses **MCP elicitation**: during `wait_for_approval`, the server asks the client to show the user an approve/reject prompt. The answer comes from the user's UI action, not from the model.
 
-Client support varies and changes, so verify per client. Without elicitation, `wait_for_approval` returns a dashboard link. Elicitation arrives with the dashboard in M6 (DECISIONS M4-03); until then `wait_for_approval` only waits and tells Claude where the human approves. There is deliberately **no** path where the user types "approve" and Claude relays it, because the server can't tell the user and Claude apart in that path.
+Client support varies and changes, so verify per client. Without elicitation, `wait_for_approval` returns a dashboard link (`approve_at`). Warden doesn't use elicitation yet (DECISIONS M4-03, M6-13): an answer coming back over the MCP connection must never approve, and with `approvals.e2e` on the approval has to be signed by your passkey anyway, so chat hands off to the dashboard link. There is deliberately **no** path where the user types "approve" and Claude relays it, because the server can't tell the user and Claude apart in that path.
 
 Plans longer than `chat_max_steps` (setting, default 10) show a summary and a dashboard link instead.
 
@@ -504,7 +504,8 @@ Plans longer than `chat_max_steps` (setting, default 10) show a summary and a da
 - **Types:** generated from the FastAPI OpenAPI schema with `openapi-typescript`, so frontend and backend can't drift.
 - **Routing via NPM:** `warden.lan/` → Next.js, `warden.lan/api`, `/ws`, `/mcp` → FastAPI. Same origin, so no CORS.
 - **Auth:** handled by FastAPI. Passkey (WebAuthn) login issues an httpOnly, `SameSite=Strict` session cookie. Next.js never sees tokens.
-- **Pages:** Live feed, Pending approvals, Plan detail (steps, verdicts per reviewer, diff vs. previous plan, live output), Schedules, Agents, Policy, Audit log, Kill switch.
+- **Pages:** Approvals, Plans, Plan detail (steps, verdicts per reviewer, diff vs. previous plan, live output, diagnosis, after-approval summary), Live feed, Schedules, Agents, Groups, Policy, Audit log, Settings, plus Lockdown and the kill switch in the top bar.
+- **Tests:** a Playwright suite runs the real `warden serve` behind `web/scripts/proxy.mjs` (which plays NPM's part) with a virtual passkey authenticator, and fails if the page requests anything outside its own origin.
 - Approval requires a fresh action per plan. No "approve all".
 - Screens, layout and states: see section 17.
 
@@ -660,7 +661,7 @@ sudo systemctl enable --now warden-backend warden-web
 
 ### In Nginx Proxy Manager
 
-- Proxy host `warden.lan` → Next.js port; custom locations `/api`, `/ws` (WebSocket support on), `/mcp` → the MCP port (`mcp.listen_port`, default 8700). Turn off response buffering for `/mcp` (Streamable HTTP uses server-sent events).
+- Proxy host `warden.lan` → Next.js port (the `warden-web` service, `node .next/standalone/server.js`, default 3000); custom locations `/api`, `/ws` (WebSocket support on), `/mcp` → `http.listen_port` (default 8700). Turn off response buffering for `/mcp` (Streamable HTTP uses server-sent events).
 - Access list: LAN + WireGuard subnets only.
 
 ### Connect clients (phase 1, over WireGuard)

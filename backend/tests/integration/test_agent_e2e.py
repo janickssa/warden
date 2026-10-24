@@ -32,12 +32,12 @@ def run(coro: object) -> None:
 
 
 def output_of(w: World, plan_id: str, n: int) -> str:
-    with Session(w.engine) as s:  # type: ignore[arg-type]
+    with Session(w.engine) as s:
         return "".join(r.data for r in outputs.read(s, plan_id, n))
 
 
 def actions(w: World) -> list[str]:
-    with Session(w.engine) as s:  # type: ignore[arg-type]
+    with Session(w.engine) as s:
         return [e.action for e in audit.entries(s)]
 
 
@@ -139,7 +139,7 @@ def test_replayed_plan_refused_by_agent() -> None:
                 )
             )
             await w.wait_for(lambda: "plan_refused_by_agent" in actions(w))
-            with Session(w.engine) as s:  # type: ignore[arg-type]
+            with Session(w.engine) as s:
                 entry = next(e for e in audit.entries(s) if e.action == "plan_refused_by_agent")
             assert json.loads(entry.detail)["code"] == "replayed_plan"
 

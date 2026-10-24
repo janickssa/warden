@@ -119,13 +119,18 @@ class WardenMcp:
                     }
         return out
 
+    def dashboard_link(self, plan_id: str) -> str:
+        """Where the human approves (README 10.1: without elicitation, wait_for_approval gives this link)."""
+        return f"{self._config().settings.server.public_url.rstrip('/')}/plans/{plan_id}"
+
     def _next(self, p: Plan) -> str:
         if p.status == S.REJECTED and not p.policy_result.ok:
             return "Policy denied this plan; that is final. Propose a different plan."
         if p.status == S.AWAITING_APPROVAL:
             return (
-                "Waiting for the human. Call wait_for_approval. They approve on their own channel, e.g. "
-                f"`warden approve {p.id} --hash {p.hash[7:19]}` on the warden guest."
+                "Waiting for the human. Call wait_for_approval. They approve on their own channel: the "
+                f"dashboard at {self.dashboard_link(p.id)}, the app, or "
+                f"`warden approve {p.id} --hash {p.hash[7:19]}` on the warden guest. You can't approve."
             )
         if p.status == S.APPROVED:
             return "Approved. Call execute_plan."
@@ -253,8 +258,8 @@ class WardenMcp:
         return self.view(self._get(plan_id))
 
     async def wait_for_approval(self, ctx: Context, plan_id: str, timeout_s: int) -> dict[str, Any]:
-        """Poll until a human decides. Nothing in here can approve or reject: there is no elicitation in M4
-        (DECISIONS M4-03); from M6 the chat client is handed off to the dashboard to sign (README 10.0)."""
+        """Poll until a human decides. Nothing in here can approve or reject: no elicitation (DECISIONS M4-03,
+        M6-13). While undecided it returns the dashboard link where the human approves (README 10.1)."""
         self.actor(ctx)
         plan = self._get(plan_id)
         loop = asyncio.get_running_loop()
@@ -266,6 +271,8 @@ class WardenMcp:
             plan = self._get(plan_id)
         view = self.view(plan, full=False)
         view["decided"] = plan.status not in UNDECIDED
+        if not view["decided"]:
+            view["approve_at"] = self.dashboard_link(plan.id)
         return view
 
     async def execute_plan(self, ctx: Context, plan_id: str) -> dict[str, Any]:

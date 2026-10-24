@@ -222,7 +222,7 @@ function Plan({ p }: { p: PlanDetail }) {
   const passkeyName = passkeys.data?.find((k) => k.credential_id === p.approval?.passkey)?.name;
 
   return (
-    <section className={`w-page has-actionbar`} style={{ maxWidth: 1040, paddingTop: 20, paddingBottom: 0, gap: "var(--space-8)" }}>
+    <section className={`w-page has-actionbar`} style={{ maxWidth: 1040, paddingTop: 20, gap: "var(--space-8)" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <Link href={backHref} className="btn btn-ghost" style={{ fontSize: 13, alignSelf: "flex-start" }} data-testid="back">
           <ArrowLeft size={14} /> {t(backLabel)}

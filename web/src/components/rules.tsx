@@ -18,7 +18,7 @@ const tint = (c: string, p: number) => `color-mix(in srgb, var(--color-${c}) ${p
 
 export function FieldRow({ label, path, hint, children, last }: { label: string; path?: string; hint?: string; children: React.ReactNode; last?: boolean }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 0", borderBottom: last ? "1px solid transparent" : "1px solid var(--color-divider)" }}>
+    <div data-field={path} style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 0", borderBottom: last ? "1px solid transparent" : "1px solid var(--color-divider)" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
         <span style={{ fontSize: 14 }}>{label}</span>
         {path && <span className="mono" style={{ fontSize: 11, color: "var(--color-neutral-500)" }}>{path}</span>}

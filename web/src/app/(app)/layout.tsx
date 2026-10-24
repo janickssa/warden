@@ -17,7 +17,7 @@ function Language({ children }: { children: React.ReactNode }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const me = useMe();
-  if (me.error && !(me.error instanceof ApiError)) {
+  if (me.error && !me.data && !(me.error instanceof ApiError)) {
     return (
       <div role="alert" className="w-box w-box--warn" style={{ margin: 24 }}>
         <WifiSlash size={18} color="var(--color-warn)" />
