@@ -36,7 +36,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 | M1 ☑ | Core | Plan store, state machine, canonical hashing, policy engine, read-only checker, audit chain, CLI approval | Plans propose, approve and validate locally | `tests/e2e/test_m1_local_flow.py` + documented CLI session in `docs/m1-demo.md` |
 | M2 ☑ | Agent | `warden-agent` (Go), enrollment + internal CA, mTLS WebSocket, dispatcher, per-step checks, baseline rules, streaming, kill, disconnect handling, docker-socket-proxy | Plan runs on `dev`, fails and revises; a tampered plan is refused | Go + pytest integration (agent in a container) and a manual run on `dev` documented in `docs/m2-demo.md` |
 | M3 ☑ | Policy distribution | Bundle compiler, tighten/loosen classifier (default loosen), online/offline keys, `warden-sign`, groups, rollout tracking, lockdown, held/invalidated | Tightening reaches all agents in < 5 s; loosening without the offline key is rejected | `tests/integration/test_policy_distribution.py` (5 agents, timed) and `test_cli_daemon.py::test_m3_dry_run`, plus classifier property tests; manual run in `docs/m3-demo.md` |
-| M4 | MCP | FastMCP tools (§6), Streamable HTTP + stdio, elicitation, MCP auth | Works end-to-end from Claude Code over WireGuard | MCP client test + manual Claude Code session in `docs/m4-demo.md` |
+| M4 ◐ | MCP | FastMCP tools (§6), Streamable HTTP + stdio, elicitation, MCP auth | Works end-to-end from Claude Code over WireGuard | MCP client test + manual Claude Code session in `docs/m4-demo.md` |
 | M5 | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
 | M6 | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | Playwright suite (states from §17.6 per page) + manual check over VPN |
 | M7 | Schedules | Templates, APScheduler cron, expiry, pause/resume, failure notify | Nightly job runs and reports | Time-travel scheduler test + one real nightly run |
@@ -464,12 +464,68 @@ Differences from the plan above:
 - The test gate file ships inside the backend package (M3-08).
 - Agents enrolling after v1 accept the current version (M3-06).
 
-## M4 MCP — outline
+## M4 MCP — detailed plan
 
-FastMCP server with exactly the §6 tools (+ D-14), Streamable HTTP at `/mcp` and stdio, workflow-first
-tool descriptions, elicitation for chat approval (falls back to a dashboard link; with `approvals.e2e`
-on, it hands off to dashboard/app to sign), MCP client auth (bearer token per client, separate from
-human auth). Tool-surface test (no approve/force/override/edit_policy/run). Manual Claude Code check.
+**Goal (README 6, 10.1; Done when: works end to end from Claude Code over WireGuard).** Claude gets exactly
+the README §6 tools plus `post_diagnosis` (D-14), and nothing that approves, rejects, edits policy, reads or
+changes settings, or runs anything unplanned.
+
+### Shape
+- **SDK:** `mcp` 2.3 (`MCPServer`, formerly FastMCP) mounted in a FastAPI app served by uvicorn **inside
+  `warden serve`**, next to the dispatcher (D-10: the MCP process has no approve path, and the Warden home
+  stays private to the service user). New `settings.yaml` block `mcp: {listen_host, listen_port}`
+  (default `127.0.0.1:8700`; NPM forwards `/mcp`). DNS-rebinding protection allows only the host of
+  `server.public_url` plus `listen_host`.
+- **Client auth (separate from human auth):** one bearer token per MCP client, `wdn_mcp_<secret>`, stored as a
+  SHA-256 hash. `warden mcp add <name>` prints it once; `warden mcp list`, `warden mcp revoke <name>`. These
+  are human CLI commands. A missing, unknown or revoked token gets 401 before the MCP layer sees the request.
+  The client name becomes the `ClaudeActor` on everything it does. OAuth is M9.
+- **stdio:** `warden mcp stdio --url … --token-file …` is a bridge on the client's machine: stdio on one side,
+  the same authenticated Streamable HTTP endpoint on the other. There is deliberately no stdio server that
+  opens the Warden database: anything able to start it already has a shell as the service user, which is the
+  human channel (D-10).
+
+### Tools (`backend/src/warden/mcp/`)
+| Tool | Does | Notes |
+|---|---|---|
+| `propose_plan(goal, target, steps, revises?)` | `PlanService.propose` as `ClaudeActor(client)` | Returns plan ID, hash, policy result, gatekeeper verdicts, final verdict, what the human must do next |
+| `get_plan(plan_id)` | Status, steps, per-step results with capped output, diagnoses, `human_note` (null until M6) | Output is labelled as untrusted text from the target |
+| `wait_for_approval(plan_id, timeout_s?)` | Blocks until decided or expired, max 300 s | Elicitation never approves in M4 (see below) |
+| `execute_plan(plan_id)` | `Dispatcher.execute`; waits up to 240 s, with a progress notification per step | Returns `running` past that (poll `get_plan`) or `held` with the reason |
+| `diff_plans(old_id, new_id)` | `PlanService.diff` | |
+| `read_only(target, command)` | `Dispatcher.read_only` as the client | Returns the audit ID, for `post_diagnosis` |
+| `list_resources(target?)` | Targets (online, policy version, lockdown), workspace roots, groups, effective allowlist, allowed compose projects, denied containers, hosts, limits, read-only mode | Policy only; `settings.yaml` is never exposed |
+| `post_diagnosis(plan_id, note, read_only_audit_ids)` | D-14 exactly: note ≤ 4000 characters (D-21 text rules) + ≤ 20 audit IDs; the server attaches the real commands and outputs | Can't change plan state; audited |
+
+- Tool descriptions lead with the workflow: look around with `read_only`, propose a full plan, wait for
+  approval, execute, and on failure diagnose and propose a revision with `revises`.
+- **Elicitation (README 10.1):** M4 uses it only to *show* the plan summary and where to approve (CLI now,
+  dashboard link from M6). An elicitation answer never approves or rejects. Invariant 3 needs approval from
+  a channel authenticated separately from the MCP connection, and the SDK warns that agent clients may answer
+  elicitations automatically. Whether chat approval should exist when `approvals.e2e` is off is a question
+  for the owner (asked at the end of M4). With e2e on (the default from M6), chat hands off to the dashboard
+  through URL-mode elicitation.
+
+### Tests
+- **Tool surface:** the exact set of 8 names; no tool or parameter named or behaving like approve, reject,
+  force, override, edit_policy, settings or run; schemas checked.
+- **Auth:** missing, wrong or revoked token → 401; foreign `Host` → refused; tokens stored hashed; add and
+  revoke audited.
+- **Unit (in-process client):** every tool, refusals (unknown plan, not approved, plan of another target,
+  read-only refusals), output caps, the timeout of `wait_for_approval`.
+- **`post_diagnosis`:** every D-14 refusal (plan not failed, too many or duplicate IDs, wrong action, other
+  target, other client, before the failure, bad note) and the attached evidence.
+- **Integration (real agent, real HTTP):** Claude's whole loop over Streamable HTTP with a bearer token:
+  propose → wait (a human approves in parallel) → execute → fail → `read_only` → `post_diagnosis` → revise →
+  diff → approve → succeed. The stdio bridge does the same handshake.
+- **Done when (manual):** `docs/m4-demo.md`, Claude Code over WireGuard through NPM.
+
+### Commits
+1. `mcp: settings, client tokens and CLI`
+2. `mcp: tools and server`
+3. `mcp: HTTP app in warden serve, stdio bridge`
+4. `test: MCP integration`
+5. `docs: M4 checklist, README §6/§14, decisions`
 
 ## M5 Gatekeepers — outline
 
