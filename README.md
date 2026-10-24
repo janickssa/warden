@@ -246,6 +246,9 @@ Values unknown until runtime (container IDs, ports) are declared as `captures` a
 | `diff_plans(old_id, new_id)` | — | Structured diff, also shown to the human. |
 | `read_only(target, command)` | No (allowlist) | Runs one allowlisted read-only command. |
 | `list_resources(target?)` | No | Targets, containers, compose projects and directories Warden may touch. |
+| `post_diagnosis(plan_id, note, read_only_audit_ids[])` | No (can't change state) | After a failure: a plain-text note plus the audit IDs of `read_only` commands run since. Warden attaches their real output (DECISIONS D-14). |
+
+Each MCP client authenticates with its own bearer token (`warden mcp add <name>` on the warden guest; `warden mcp revoke <name>`), separate from every human login. Everything it does is recorded under that client's name.
 
 Tool descriptions given to Claude must explain the workflow: *look around with `read_only`, propose a full plan, wait for approval, execute, and on failure inspect and propose a revision.*
 
@@ -485,7 +488,7 @@ All channels share the same plan store and get live updates through the event bu
 
 Uses **MCP elicitation**: during `wait_for_approval`, the server asks the client to show the user an approve/reject prompt. The answer comes from the user's UI action, not from the model.
 
-Client support varies and changes, so verify per client. Without elicitation, `wait_for_approval` returns a dashboard link. There is deliberately **no** path where the user types "approve" and Claude relays it, because the server can't tell the user and Claude apart in that path.
+Client support varies and changes, so verify per client. Without elicitation, `wait_for_approval` returns a dashboard link. Elicitation arrives with the dashboard in M6 (DECISIONS M4-03); until then `wait_for_approval` only waits and tells Claude where the human approves. There is deliberately **no** path where the user types "approve" and Claude relays it, because the server can't tell the user and Claude apart in that path.
 
 Plans longer than `chat_max_steps` (setting, default 10) show a summary and a dashboard link instead.
 
@@ -651,13 +654,13 @@ sudo systemctl enable --now warden-backend warden-web
 
 ### In Nginx Proxy Manager
 
-- Proxy host `warden.lan` → Next.js port; custom locations `/api`, `/ws` (WebSocket support on), `/mcp` → FastAPI port.
+- Proxy host `warden.lan` → Next.js port; custom locations `/api`, `/ws` (WebSocket support on), `/mcp` → the MCP port (`mcp.listen_port`, default 8700). Turn off response buffering for `/mcp` (Streamable HTTP uses server-sent events).
 - Access list: LAN + WireGuard subnets only.
 
 ### Connect clients (phase 1, over WireGuard)
 
-- **Claude Code:** `claude mcp add --transport http warden https://warden.lan/mcp`
-- **Claude Desktop:** add Warden as an MCP server / connector in settings.
+- **Claude Code:** `warden mcp add claude-code` on the warden guest prints the token and the exact command: `claude mcp add --transport http warden https://warden.example.dk/mcp --header "Authorization: Bearer wdn_mcp_…"`.
+- **Claude Desktop / stdio-only clients:** `warden mcp stdio --url https://warden.example.dk/mcp --token-file ~/.warden/mcp-token` is a stdio bridge that runs on the client machine. Or add Warden as a remote connector in settings where the client supports headers.
 
 Exact connection steps differ between client versions, so check each client's current docs.
 

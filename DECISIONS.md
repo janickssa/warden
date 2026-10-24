@@ -94,6 +94,18 @@ These are all stricter than or equal to the spec. Where they change README text,
 | M3-11 | Unpublished edits | While `policy.yaml` differs from what's published for a target (for example while a loosening is pending), plans for that target are refused with `policy_unpublished` until the change is published, or reverted and the pending one discarded. Fail closed. |
 | M3-12 | Removed targets | A target removed from `targets.yaml` keeps its last bundle and gets no new ones; the dispatcher refuses plans for unknown targets. Revoke its agent. |
 
+## B5. Decisions made while building M4
+
+| ID | Topic | Decision |
+|---|---|---|
+| M4-01 | Where MCP runs | Streamable HTTP at `/mcp`, served by uvicorn inside `warden serve` next to the dispatcher (settings `mcp.listen_host/port`, default `127.0.0.1:8700`; NPM forwards `/mcp`). The app is the MCP SDK's own Starlette app. FastAPI arrives with the REST API in M6. |
+| M4-02 | Client auth | One bearer token per MCP client (`warden mcp add/list/revoke`, human CLI), stored as a SHA-256 hash. A request without a valid token gets 401 before the MCP layer runs, and every tool call re-checks the token on its own request. The client name is the actor on everything it does. Names can't contain `:`, so they can't look like a human channel (`cli:…`). DNS-rebinding protection only accepts the Host of `server.public_url` and the listen address. OAuth stays M9. |
+| M4-03 | Elicitation | **Not in M4.** An elicitation answer comes through the MCP connection, and the SDK itself warns that agent clients may answer automatically. Invariant 3 requires approval from a separately authenticated channel, so an elicitation must never approve or reject. An informational "approve it on the CLI" dialog decides nothing, and the SDK's two protocol versions (handshake-era requests vs. 2026-07-28 `InputRequiredResult`) handle it differently, so it isn't worth the risk now. From M6, with `approvals.e2e` on, `wait_for_approval` hands off to the dashboard through URL-mode elicitation. Whether chat approval should exist at all when e2e is off is **an open question for you**. A test proves that a client accepting every elicitation can't approve anything. |
+| M4-04 | stdio | `warden mcp stdio` is a bridge on the client machine to the authenticated HTTP endpoint. There is deliberately no stdio server that opens the Warden database: whatever could start it already has a shell as the service user, which is the human channel (D-10). The bridge refuses to send a token over plain `http://` to anything but localhost. |
+| M4-05 | Long runs | `execute_plan` waits up to 240 s with a progress notification per finished step, then returns `running` and Claude follows with `get_plan`. The run itself is owned by the dispatcher, so a client that disconnects doesn't stop it. |
+| M4-06 | What Claude sees | Plan views label target output `output_untrusted` and return the last 8000 characters per step (32000 for `read_only`); the full output stays in Warden. `list_resources` returns the compiled policy per target (programs, paths, projects, hosts, limits, read-only mode) plus online state and lockdown, and never anything from `settings.yaml`. |
+| M4-07 | `post_diagnosis` checks | As D-14, with "after the plan failed" meaning the audit sequence number is after the plan's `run_finished` entry, and at most 10 diagnoses per plan. Refused `read_only` commands can't be cited (they have no output). |
+
 ## C. README ↔ prototype disagreements
 
 | ID | Where | README says | Prototype does | Resolution |
