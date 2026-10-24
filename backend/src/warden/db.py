@@ -12,6 +12,8 @@ from sqlmodel import SQLModel, create_engine
 import warden.agents
 import warden.audit
 import warden.dispatch.outputs
+import warden.mcp.clients
+import warden.plans.diagnosis
 import warden.plans.store
 import warden.policy_dist.bundle
 import warden.policy_dist.offline_keys

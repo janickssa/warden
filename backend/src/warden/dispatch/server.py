@@ -77,6 +77,7 @@ class ReadOnlyOutcome:
     output: str
     truncated: bool
     refused: list[dict[str, Any]]
+    audit_id: int = 0
 
 
 class Dispatcher:
@@ -144,9 +145,12 @@ class Dispatcher:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
-    def _audit(self, actor: str, action: str, subject: str, **detail: Any) -> None:
+    def _audit(self, actor: str, action: str, subject: str, **detail: Any) -> int:
         with Session(self._engine) as s, s.begin():
-            audit.append(s, ts=self._clock(), actor=actor, action=action, subject=subject, detail=detail)
+            row = audit.append(
+                s, ts=self._clock(), actor=actor, action=action, subject=subject, detail=detail
+            )
+            return row.seq
 
     async def _handle(self, ws: ServerConnection) -> None:
         path = ws.request.path if ws.request else ""
@@ -492,6 +496,18 @@ class Dispatcher:
             self._finish(run)
             return await run.done
 
+    def execute_in_background(self, plan_id: str) -> asyncio.Task[Plan]:
+        """Start `execute` as a task the dispatcher owns, so a caller that stops waiting doesn't cancel it."""
+        task: asyncio.Task[Plan] = asyncio.get_running_loop().create_task(self.execute(plan_id))
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
+
+    def run_progress(self, plan_id: str) -> tuple[int, int] | None:
+        """(finished steps, total steps) for a running plan."""
+        run = self.runs.get(plan_id)
+        return None if run is None else (len(run.outcomes), len(run.plan.steps))
+
     async def kill(self, plan_id: str, actor: str) -> None:
         run = self.runs.get(plan_id)
         if run is None:
@@ -534,8 +550,15 @@ class Dispatcher:
         violations = check_read_only(command, rules, self._plans.resolver)
         if violations:
             detail = [v.model_dump() for v in violations]
-            self._audit(actor, "read_only_refused", f"{target} · {command}", violations=detail)
-            return ReadOnlyOutcome(False, None, "", False, detail)
+            seq = self._audit(
+                actor,
+                "read_only_refused",
+                f"{target} · {command}",
+                target=target,
+                command=command,
+                violations=detail,
+            )
+            return ReadOnlyOutcome(False, None, "", False, detail, seq)
         sess = self.sessions.get(target)
         if sess is None:
             raise DispatchRefused(f"{target} is offline", code="agent_offline")
@@ -548,17 +571,19 @@ class Dispatcher:
         finally:
             sess.pending_ro.pop(rid, None)
         refused = [res.refused.model_dump()] if res.refused else []
-        self._audit(
+        seq = self._audit(
             actor,
             "read_only" if not refused else "read_only_refused",
             f"{target} · {command}",
+            target=target,
+            command=command,
             exit_code=res.exit_code,
             output=res.output[:65536],
             truncated=res.truncated,
             refused=refused,
             duration_ms=res.duration_ms,
         )
-        return ReadOnlyOutcome(not refused, res.exit_code, res.output, res.truncated, refused)
+        return ReadOnlyOutcome(not refused, res.exit_code, res.output, res.truncated, refused, seq)
 
 
 def effective_cap_bytes(cfg: Config, target: str) -> int:

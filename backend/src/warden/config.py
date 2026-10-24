@@ -82,6 +82,14 @@ class AgentListenerSettings(BaseModel):
     server_names: tuple[str, ...] = ("warden.lan",)  # names/IPs agents use; they go into the server cert
 
 
+class McpSettings(BaseModel):
+    """Where the MCP endpoint listens. NPM forwards `/mcp` here (README 14); never expose it directly."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    listen_host: str = "127.0.0.1"
+    listen_port: Annotated[int, Field(ge=1, le=65535)] = 8700
+
+
 class Settings(BaseModel):
     """Human-only settings. Claude can neither read nor change these (README 17.3)."""
 
@@ -89,6 +97,7 @@ class Settings(BaseModel):
     server: ServerSettings = ServerSettings()
     approvals: ApprovalSettings = ApprovalSettings()
     agents: AgentListenerSettings = AgentListenerSettings()
+    mcp: McpSettings = McpSettings()
 
 
 def parse_settings(text: str, *, source: str = "settings.yaml") -> Settings:

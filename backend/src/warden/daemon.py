@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import uvicorn
 from sqlmodel import Session
 
 from warden.agents import Registry
@@ -30,6 +31,8 @@ from warden.db import make_engine
 from warden.dispatch.server import Dispatcher
 from warden.errors import WardenError
 from warden.keys import OnlineKey
+from warden.mcp.http import build_app, identify_from_headers
+from warden.mcp.server import WardenMcp, build_server
 from warden.plans.service import Config, PlanService
 from warden.policy_dist import bundle as bundles
 from warden.signing import ApprovalKey
@@ -66,6 +69,13 @@ class Daemon:
             ca=ca,
             online=online,
             config=lambda: self.config,
+        )
+        self.mcp = WardenMcp(
+            engine=self.engine,
+            plans=self.plans,
+            dispatcher=self.dispatcher,
+            config=lambda: self.config,
+            identify=identify_from_headers(self.engine),
         )
 
     def _fresh_config(self) -> Config:
@@ -155,8 +165,25 @@ class Daemon:
             return {"dropped": req["name"]}
         raise WardenError(f"unknown operation {op!r}", code="bad_request")
 
+    def mcp_server(self) -> uvicorn.Server:
+        s = self.config.settings
+        app = build_app(build_server(self.mcp), self.engine, s)
+        return uvicorn.Server(
+            uvicorn.Config(
+                app,
+                host=s.mcp.listen_host,
+                port=s.mcp.listen_port,
+                log_level="warning",
+                proxy_headers=False,
+                server_header=False,
+                lifespan="on",
+            )
+        )
+
     async def run(self) -> None:
         port = await self.dispatcher.start()
+        mcp_http = self.mcp_server()
+        mcp_task = asyncio.create_task(mcp_http.serve())
         path = self.home / SOCKET
         with contextlib.suppress(FileNotFoundError):
             path.unlink()
@@ -166,13 +193,23 @@ class Daemon:
         finally:
             os.umask(old_umask)
         os.chmod(path, 0o600)
-        log.info("agent listener on :%s, admin socket %s, policy v%s", port, path, self.config.policy_version)
+        log.info(
+            "agent listener on :%s, MCP on %s:%s/mcp, admin socket %s, policy v%s",
+            port,
+            self.config.settings.mcp.listen_host,
+            self.config.settings.mcp.listen_port,
+            path,
+            self.config.policy_version,
+        )
         expiry = asyncio.create_task(self._expire_loop())
         try:
             async with server:
                 await server.serve_forever()
         finally:
             expiry.cancel()
+            mcp_http.should_exit = True
+            with contextlib.suppress(Exception):
+                await asyncio.wait_for(mcp_task, 10)
             await self.dispatcher.stop()
 
 

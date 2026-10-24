@@ -34,6 +34,8 @@ from warden.daemon import Daemon, admin_request
 from warden.db import make_engine
 from warden.errors import ConfigError, WardenError
 from warden.keys import OnlineKey
+from warden.mcp import clients as mcp_clients
+from warden.mcp.bridge import run_bridge
 from warden.plans.models import Plan, PlanStatus, ProposeRequest, StepEdit
 from warden.plans.service import Config, PlanService
 from warden.policy_dist import bundle as bundles
@@ -217,6 +219,17 @@ def build_parser() -> argparse.ArgumentParser:
     reg.add_argument("--backup", action="store_true", help="register it as the backup key")
     osub.add_parser("list")
 
+    mc = sub.add_parser("mcp", help="MCP client tokens, and the stdio bridge for clients without HTTP")
+    mcsub = mc.add_subparsers(dest="mcp_cmd", required=True)
+    madd = mcsub.add_parser("add", help="create a bearer token for one MCP client (shown once)")
+    madd.add_argument("name", help="e.g. claude-code")
+    mrev = mcsub.add_parser("revoke")
+    mrev.add_argument("name")
+    mcsub.add_parser("list")
+    mst = mcsub.add_parser("stdio", help="bridge stdio to Warden's /mcp (runs on the client's machine)")
+    mst.add_argument("--url", required=True, help="e.g. https://warden.example.dk/mcp")
+    mst.add_argument("--token-file", required=True)
+
     ld = sub.add_parser("lockdown", help="stop everything: kill runs, hold approved plans, read-only only")
     ld.add_argument("action", nargs="?", choices=["lift"], help="lift lockdown (needs the offline key)")
 
@@ -398,6 +411,35 @@ def _offline_keys(home: Home, args: argparse.Namespace) -> int:
     return 0
 
 
+def _mcp(home: Home, args: argparse.Namespace) -> int:
+    if args.mcp_cmd == "stdio":
+        token = Path(args.token_file).read_text(encoding="utf-8").strip()
+        asyncio.run(run_bridge(args.url, token))
+        return 0
+    home.check_private()
+    engine = make_engine(home.db)
+    now = datetime.now(UTC)
+    if args.mcp_cmd == "add":
+        token = mcp_clients.add(engine, args.name, actor=_human(), now=now)
+        public = home.config().settings.server.public_url.rstrip("/")
+        _out(f"Token for {args.name} (shown once; store it in the client, not in a repo):\n  {token}\n")
+        _out("Claude Code:")
+        _out(
+            f'  claude mcp add --transport http warden {public}/mcp --header "Authorization: Bearer {token}"'
+        )
+    elif args.mcp_cmd == "revoke":
+        mcp_clients.revoke(engine, args.name, actor=_human(), now=now)
+        _out(f"revoked {args.name}; its requests are refused from now on")
+    else:
+        rows = mcp_clients.list_clients(engine)
+        if not rows:
+            _out("No MCP clients. Add one with `warden mcp add claude-code`.")
+        for r in rows:
+            when = f"revoked {r.revoked_at}" if r.revoked_at else f"since {r.created_at}"
+            _out(f"{r.name:<16} {r.status:<8} {when}  by {r.created_by}")
+    return 0
+
+
 def _lockdown(home: Home, args: argparse.Namespace) -> int:
     online, approval = _keys(home)
     engine = make_engine(home.db)
@@ -514,6 +556,8 @@ def run(argv: Sequence[str]) -> int:
         return _offline_keys(home, args)
     if args.cmd == "lockdown":
         return _lockdown(home, args)
+    if args.cmd == "mcp":
+        return _mcp(home, args)
     if args.cmd == "agent":
         return _agent(home, args)
     if args.cmd == "serve":
