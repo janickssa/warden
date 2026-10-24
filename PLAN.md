@@ -617,6 +617,24 @@ more?* Gatekeepers can only make things stricter (invariant 6): every error, tim
 4. `test: injection fixtures and live suite`
 5. `docs: M5 checklist, README §9, decisions`
 
+### M5 status ◐ (24.10.2026): code complete, Done-when waits for your models
+
+Everything in the plan above is built and tested without models: 11 injection fixtures, prompt hygiene, the
+`injection-scan` floor (every injection case escalates even when every model is fooled), every adapter's
+failure modes, panel timeout and strictest merge, revision context from the database, and the `warden
+gatekeeper check` command. The suite ships with the backend.
+Python: 1000 unit tests (plus 11 live tests, skipped without models) + 17 integration tests.
+
+**Done-when is a live run**, because no model is reachable from this container. On the warden guest, once
+Ollama runs `qwen3:14b` on the `ai` VM, run `warden gatekeeper check --injection --record
+tests/gatekeeper/recorded/local-qwen3-14b.json` (docs/m5-demo.md). When every answer is escalate or deny, M5
+is done, and the recording becomes a CI regression test.
+
+Differences from the plan above:
+- The injection suite lives in the package (`warden/gatekeeper/injection.yaml`), so the installed Warden can
+  run it.
+- Unavailable reviewers keep risk `high`, except "none configured" (M5-05).
+
 ## M6 Dashboard — outline
 
 1. `scripts/gen-tokens` parses `design/nocturne/styles.css` → `design/tokens.json` (+ status colours and

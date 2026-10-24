@@ -1,0 +1,37 @@
+# Gatekeeper panel (README 9). Copy to /etc/warden/gatekeeper.yaml.
+# Strictest verdict wins. Any error, timeout or odd answer counts as escalate; a policy deny never gets here.
+mode: strictest
+timeout_s: 60
+injection_scan: true        # built-in rules that escalate injection attempts in untrusted text
+
+reviewers:
+  # Local model on the `ai` VM (RTX 3060 12 GB). `ollama pull qwen3:14b` there first.
+  - name: local
+    provider: ollama
+    url: http://ai.lan:11434
+    model: qwen3:14b
+    options:
+      think: false           # qwen3's quick non-thinking mode; the prompt only asks "is this dangerous?"
+      num_ctx: 8192          # keeps weights + context inside 12 GB
+    # send_untrusted_output defaults to true for ollama: command output stays on your network.
+
+  # Optional second opinion from another provider (keys live in /etc/warden/secrets/<NAME>, mode 0600):
+  # - name: openai
+  #   provider: openai
+  #   model: <a current OpenAI model>
+  #   api_key: secret:OPENAI_API_KEY
+  #   send_untrusted_output: false   # only goal + steps leave the network (the default for cloud reviewers)
+  #
+  # - name: claude
+  #   provider: anthropic
+  #   model: claude-opus-5-5
+  #   api_key: secret:ANTHROPIC_API_KEY
+  #   options:
+  #     effort: low          # optional; Claude always thinks, effort sets how much
+  #
+  # - name: lan-llm
+  #   provider: openai_compatible
+  #   url: http://llm.lan:8000/v1
+  #   model: my-model
+  #   options:
+  #     response_format: json_object   # or json_schema / none, depending on the server

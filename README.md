@@ -424,11 +424,13 @@ The gatekeeper is **provider-agnostic** and can run several reviewers at once. U
 # gatekeeper.yaml
 mode: strictest            # strictest verdict across reviewers wins
 timeout_s: 60
+injection_scan: true       # built-in rules, see below
 reviewers:
   - name: local
     provider: ollama
     url: http://ai.lan:11434
-    model: qwen2.5:14b-instruct
+    model: qwen3:14b
+    options: {think: false, num_ctx: 8192}
   - name: openai
     provider: openai
     model: <configurable>
@@ -443,10 +445,14 @@ Supported providers: `ollama`, `openai`, `anthropic`, plus any OpenAI-compatible
 | VRAM | Suitable size | Example |
 |---|---|---|
 | 8 GB | 7–8B | `qwen2.5:7b-instruct`, `llama3.1:8b` |
-| 12–16 GB | 14B | `qwen2.5:14b-instruct` |
+| 12–16 GB | 14B | `qwen3:14b` (the default here: RTX 3060 12 GB, DECISIONS D-01) |
 | 24 GB | 32B | `qwen2.5:32b-instruct` |
 
-Use JSON mode and temperature 0 on every provider.
+Use structured JSON output and temperature 0 on every provider. (Claude is the exception: its Messages API no longer accepts sampling parameters, so the Anthropic adapter sends none.) API keys are never in `gatekeeper.yaml`: `api_key: secret:NAME` reads `/etc/warden/secrets/NAME` (mode 0600). Command output and Claude's notes only reach reviewers with `send_untrusted_output: true`, which is the default only for `ollama`.
+
+**`injection-scan`** is a built-in deterministic reviewer. It escalates when the untrusted text carries injection markers, such as "ignore previous instructions", claims that the plan is already approved, ready-made verdict JSON, delimiter or role tags, ANSI escapes or invisible characters. It can only escalate, so a fooled model can't lower that floor. With no model reviewers configured, a "none configured" row escalates every plan.
+
+`warden gatekeeper check` sends a harmless and a harmful sample to every reviewer. `warden gatekeeper check --injection` runs the whole injection suite: every model reviewer must answer `escalate` or `deny` on every case (M5 Done-when).
 
 **Input:** goal, steps, policy summary, the previous failed plan and its error (for revisions), and recent output wrapped in `<untrusted>…</untrusted>`.
 **Question:** *do these steps do what the goal says, and nothing more?*
