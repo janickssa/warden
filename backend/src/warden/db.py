@@ -9,17 +9,6 @@ from typing import Any
 from sqlalchemy import Engine, event
 from sqlmodel import SQLModel, create_engine
 
-import warden.agents
-import warden.audit
-import warden.dispatch.outputs
-import warden.mcp.clients
-import warden.passkeys
-import warden.plans.diagnosis
-import warden.plans.store
-import warden.policy_dist.bundle
-import warden.policy_dist.offline_keys
-import warden.policy_dist.publish  # noqa: F401  (registers tables)
-
 _TRIGGERS = (
     "CREATE TRIGGER IF NOT EXISTS audit_no_update BEFORE UPDATE ON audit "
     "BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END",

@@ -104,7 +104,13 @@ class Daemon:
         cfg = self._load()
         with Session(self.engine) as s:
             version = bundles.published_version(s)
-        return Config(policy=cfg.policy, targets=cfg.targets, settings=cfg.settings, policy_version=version)
+        return Config(
+            policy=cfg.policy,
+            targets=cfg.targets,
+            settings=cfg.settings,
+            policy_version=version,
+            e2e=cfg.e2e,
+        )
 
     async def reload(self) -> dict[str, Any]:
         """After a publish: re-read config, push the latest bundles, apply lockdown, re-check plans."""

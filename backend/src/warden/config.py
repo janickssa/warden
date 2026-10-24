@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -91,6 +91,36 @@ class HttpSettings(BaseModel):
     listen_port: Annotated[int, Field(ge=1, le=65535)] = 8700
 
 
+class RetentionSettings(BaseModel):
+    """README 17.3 Settings · Retention. 0 means keep forever."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    audit_days: Literal[30, 90, 180, 365, 0] = 90
+    output_days: Literal[7, 30, 90, 180, 0] = 90
+    export: Literal["daily", "weekly", "off"] = "daily"
+    export_dir: str = "/var/lib/warden/exports"
+
+
+class ScheduleSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    default_expiry_days: Literal[30, 90, 180] = 90
+
+
+class UiSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    language: Literal["en", "da"] = "en"
+
+
+class NotificationSettings(BaseModel):
+    """iPhone notifications per event type (README 17.4)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    approval_needed: bool = True
+    plan_failed: bool = True
+    agent_refused: bool = True
+    scheduled_done: bool = True
+
+
 class Settings(BaseModel):
     """Human-only settings. Claude can neither read nor change these (README 17.3)."""
 
@@ -99,6 +129,10 @@ class Settings(BaseModel):
     approvals: ApprovalSettings = ApprovalSettings()
     agents: AgentListenerSettings = AgentListenerSettings()
     http: HttpSettings = HttpSettings()
+    retention: RetentionSettings = RetentionSettings()
+    schedules: ScheduleSettings = ScheduleSettings()
+    ui: UiSettings = UiSettings()
+    notifications: NotificationSettings = NotificationSettings()
 
 
 def parse_settings(text: str, *, source: str = "settings.yaml") -> Settings:

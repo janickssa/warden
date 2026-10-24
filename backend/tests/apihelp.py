@@ -17,6 +17,7 @@ from warden.api.app import create_api
 from warden.api.context import ApiContext
 from warden.api.events import EventBus
 from warden.ca import CA
+from warden.config import load_policy
 from warden.dispatch.server import Dispatcher
 from warden.keys import OnlineKey
 from warden.passkeys import Passkeys, RelyingParty
@@ -80,7 +81,9 @@ def make_api(world: World, tmp: Path) -> Api:
     reloads: list[int] = []
 
     async def reload() -> dict[str, Any]:
+        """What `warden serve` does on reload, reduced to re-reading policy.yaml."""
         reloads.append(1)
+        world.policy = load_policy(cfg_dir / "policy.yaml")
         return {"pushed": [], "killed": [], "invalidated": []}
 
     ctx = ApiContext(

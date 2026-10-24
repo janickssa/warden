@@ -26,7 +26,7 @@ from typing import Any
 from pydantic import ValidationError
 from sqlmodel import Session
 
-from warden import audit, passkeys
+from warden import audit, passkeys, settings_store
 from warden.actors import ClaudeActor, HumanActor
 from warden.agents import Registry
 from warden.ca import CA
@@ -80,17 +80,21 @@ class Home:
     def config(self) -> Config:
         # Lockdown is not part of the plan-checking config: proposals and approvals still work during a
         # lockdown; the dispatcher holds plans and agents refuse them (README 7A Lockdown).
-        version = 0
+        version, e2e = 0, False
+        settings = load_settings(self.config_dir / "settings.yaml")
         if self.db.exists():
             engine = make_engine(self.db)
             with Session(engine) as s:
                 version = bundles.published_version(s)
+                e2e = bundles.published_e2e(s)
+            settings = settings_store.effective(settings, engine)
             engine.dispose()
         return Config(
             policy=load_policy(self.config_dir / "policy.yaml"),
             targets=load_targets(self.config_dir / "targets.yaml"),
-            settings=load_settings(self.config_dir / "settings.yaml"),
+            settings=settings,
             policy_version=version,
+            e2e=e2e,
         )
 
     def service(self) -> PlanService:

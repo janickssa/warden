@@ -37,6 +37,11 @@ def approval_payload(
     }
 
 
+def approval_message(payload: Mapping[str, object]) -> bytes:
+    """What the approval key signs, and what a passkey signs the SHA-256 of (as its WebAuthn challenge)."""
+    return DOMAIN + canonical_bytes(dict(payload))
+
+
 class ApprovalKey:
     def __init__(self, private: Ed25519PrivateKey) -> None:
         self._private = private
@@ -56,7 +61,7 @@ class ApprovalKey:
         return b64url(raw_public(self.public))
 
     def sign(self, payload: Mapping[str, object]) -> ApprovalSignature:
-        sig = self._private.sign(DOMAIN + canonical_bytes(dict(payload)))
+        sig = self._private.sign(approval_message(payload))
         return ApprovalSignature(by=SIGNER, key_id=self.key_id, sig="ed25519:" + b64url(sig))
 
     def verifier(self) -> ApprovalVerifier:

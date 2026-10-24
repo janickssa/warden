@@ -131,11 +131,21 @@ class ApprovalSignature(Strict):
     sig: str
 
 
+class PasskeyAssertion(Strict):
+    """A WebAuthn assertion over the approval message (README 10.0 end-to-end signing). Base64url parts."""
+
+    credential_id: Annotated[str, Field(max_length=1024)]
+    authenticator_data: Annotated[str, Field(max_length=4096)]
+    client_data_json: Annotated[str, Field(max_length=4096)]
+    signature: Annotated[str, Field(max_length=1024)]
+
+
 class Approval(Strict):
     by: str
     at: datetime
     hash: str
     signature: ApprovalSignature
+    passkey: PasskeyAssertion | None = None
 
 
 class StepResult(Strict):

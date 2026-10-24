@@ -114,6 +114,10 @@ class Registry:
         self._targets = targets
         self._clock = clock
 
+    @property
+    def ca(self) -> CA:
+        return self._ca
+
     def _audit(self, s: Session, actor: str, action: str, subject: str, **detail: object) -> None:
         audit.append(s, ts=self._clock(), actor=actor, action=action, subject=subject, detail=detail)
 
@@ -193,6 +197,33 @@ class Registry:
                 return self._issue(s, row, name, now, actor)
         # Committed (status + audit) before refusing.
         raise EnrollmentRefused(refusal)
+
+    def reject(self, name: str, actor: HumanActor) -> int:
+        """Withdraw open or submitted enrollments for `name` ("Revoke token" / "Doesn't match")."""
+        if not isinstance(actor, HumanActor):
+            raise EnrollmentRefused("only a human can reject an enrollment")
+        n = 0
+        with Session(self._engine) as s, s.begin():
+            for row in s.exec(
+                select(EnrollmentRow).where(
+                    col(EnrollmentRow.name) == name, col(EnrollmentRow.status).in_(["open", "submitted"])
+                )
+            ):
+                row.status = "rejected"
+                s.add(row)
+                n += 1
+            if n:
+                self._audit(s, actor.label, "agent_enroll_rejected", name)
+        return n
+
+    def enrollment_for(self, name: str) -> EnrollmentRow | None:
+        """The latest enrollment for a name, for the Add agent dialog's progress."""
+        with Session(self._engine, expire_on_commit=False) as s:
+            return s.exec(
+                select(EnrollmentRow)
+                .where(col(EnrollmentRow.name) == name)
+                .order_by(col(EnrollmentRow.created_at).desc())
+            ).first()
 
     def _issue(self, s: Session, row: EnrollmentRow, name: str, now: datetime, actor: HumanActor) -> AgentRow:
         if row.public_key is None or row.fingerprint is None:

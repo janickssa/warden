@@ -7,6 +7,8 @@ and its deny is final (invariant 6). Hashes are recomputed at approval and again
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -28,11 +30,13 @@ from warden.errors import (
     SigningError,
 )
 from warden.gatekeeper.panel import NullPanel, Panel, final_verdict, plan_risk, safe_review
+from warden.keys import b64url, unb64url
 from warden.plans import store
 from warden.plans.diff import DiffRow, diff_steps
 from warden.plans.hashing import hash_matches, plan_hash
 from warden.plans.models import (
     Approval,
+    PasskeyAssertion,
     Plan,
     PlanStatus,
     PolicyResult,
@@ -47,7 +51,7 @@ from warden.policy.effective import EffectiveRules, effective_rules
 from warden.policy.engine import check_plan
 from warden.policy.paths import LexicalResolver, PathResolver
 from warden.policy.schema import Policy, Targets
-from warden.signing import ApprovalKey, ApprovalVerifier, approval_payload
+from warden.signing import ApprovalKey, ApprovalVerifier, approval_message, approval_payload
 from warden.text import check_free_text, normalize
 
 S = PlanStatus
@@ -61,6 +65,7 @@ class Config:
     settings: Settings
     policy_version: int = 0
     lockdown: bool = False
+    e2e: bool = False  # approvals.e2e as published to agents (D-12)
 
 
 @dataclass(frozen=True)
@@ -286,7 +291,48 @@ class PlanService:
         if not hash_matches(plan.hash, plan_hash(plan)):
             raise ApprovalRefused(f"{plan.id}: stored plan doesn't match its hash", code="hash_mismatch")
 
-    def approve(self, plan_id: str, hash_prefix: str, actor: HumanActor) -> Plan:
+    def passkey_reasons(self, plan: Plan) -> list[str]:
+        """Why approving this plan needs a passkey (README 10.0). Empty: Warden's approval key is enough."""
+        cfg = self._config()
+        rules = self._rules(plan.target)
+        risk = plan_risk(plan.gatekeepers)
+        out = []
+        if cfg.e2e:
+            out.append("end-to-end signing is on: every approval is signed by your passkey")
+        if rules.passkey:
+            out.append(f"{plan.target} is in a group that needs a passkey for every approval")
+        if risk == Risk.HIGH:
+            out.append("high-risk plans always need a passkey")
+        if risk == Risk.MEDIUM and cfg.settings.approvals.passkey_medium:
+            out.append("medium-risk plans need a passkey (Settings)")
+        return out
+
+    def approval_payload_for(self, plan: Plan, human: HumanActor, at: datetime) -> dict[str, object]:
+        expires = at + timedelta(minutes=self._config().settings.approvals.expiry_min)
+        return approval_payload(
+            plan_hash=plan.hash,
+            plan_id=plan.id,
+            target=plan.target,
+            approved_at=at,
+            expires_at=expires,
+            by=human.label,
+        )
+
+    def approve(
+        self,
+        plan_id: str,
+        hash_prefix: str,
+        actor: HumanActor,
+        *,
+        passkey: PasskeyAssertion | None = None,
+        at: datetime | None = None,
+    ) -> Plan:
+        """Approve with Warden's approval key, plus a passkey assertion when one is given or required.
+
+        `passkey` must be a WebAuthn assertion (already verified against a registered passkey by the caller)
+        whose challenge is SHA-256 of this approval's message, with `approved_at = at`. It is checked here
+        again so an assertion for another plan, window or approver can't be attached.
+        """
         human = _require_human(actor)
         prefix = hash_prefix.strip().lower().removeprefix("sha256:")
         if len(prefix) < HASH_PREFIX_MIN or any(c not in "0123456789abcdef" for c in prefix):
@@ -316,18 +362,27 @@ class PlanService:
                 code="hash_prefix",
             )
         rules = self._rules(plan.target)
-        if human.channel == "cli":
-            if rules.passkey:
+        reasons = self.passkey_reasons(plan)
+        if passkey is None and reasons:
+            where = "; approve it in the dashboard or app" if human.channel == "cli" else ""
+            raise ApprovalRefused(f"{reasons[0]}{where}", code="passkey_required")
+        now = self._now()
+        if passkey is not None:
+            if at is None or abs((now - at).total_seconds()) > 180:
                 raise ApprovalRefused(
-                    f"{plan.target} is in a group that needs a passkey for every approval; "
-                    "approve it in the dashboard or app",
-                    code="passkey_required",
+                    "the passkey approval is too old; approve again", code="challenge_invalid"
                 )
-            if plan_risk(plan.gatekeepers) == Risk.HIGH:
+            payload = self.approval_payload_for(plan, human, at)
+            expected = b64url(hashlib.sha256(approval_message(payload)).digest())
+            try:
+                signed = json.loads(unb64url(passkey.client_data_json))["challenge"]
+            except (ValueError, KeyError, TypeError) as exc:
+                raise ApprovalRefused("malformed passkey approval", code="challenge_invalid") from exc
+            if signed != expected:
                 raise ApprovalRefused(
-                    "high-risk plans need a passkey; approve it in the dashboard or app",
-                    code="passkey_required",
+                    "the passkey signed something else than this approval", code="challenge_invalid"
                 )
+            now = at
         recheck = check_plan(plan.steps, rules, self._resolver)
         if not recheck.ok:
             self._invalidate(plan, recheck)
@@ -335,17 +390,11 @@ class PlanService:
                 f"{plan_id} no longer passes policy and was invalidated", code="invalidated"
             )
 
-        now = self._now()
+        payload = self.approval_payload_for(plan, human, now)
         expires = now + timedelta(minutes=self._config().settings.approvals.expiry_min)
-        payload = approval_payload(
-            plan_hash=plan.hash,
-            plan_id=plan.id,
-            target=plan.target,
-            approved_at=now,
-            expires_at=expires,
-            by=human.label,
+        approval = Approval(
+            by=human.label, at=now, hash=plan.hash, signature=self._key.sign(payload), passkey=passkey
         )
-        approval = Approval(by=human.label, at=now, hash=plan.hash, signature=self._key.sign(payload))
         with Session(self._engine) as s, s.begin():
             current = self._awaiting(s, plan_id)
             if current.hash != plan.hash:
@@ -358,6 +407,7 @@ class PlanService:
                 plan_id,
                 hash=plan.hash,
                 key_id=approval.signature.key_id,
+                passkey=passkey.credential_id if passkey else None,
                 final_verdict=plan.final_verdict.value,
                 expires_at=expires.isoformat(),
             )

@@ -107,6 +107,14 @@ def published_version(session: Session) -> int:
     return 0 if row is None else row.version
 
 
+def published_e2e(session: Session) -> bool:
+    """`approvals.e2e` as agents enforce it: whatever the latest published bundles say (D-12)."""
+    row = session.exec(select(BundleRow).order_by(col(BundleRow.version).desc()).limit(1)).first()
+    if row is None:
+        return False
+    return bool(json.loads(row.body)["rules"].get("approvals", {}).get("e2e", False))
+
+
 def check_published(session: Session, policy: Policy, targets: Targets, target: str) -> dict[str, Any]:
     """The bundle the agent enforces, if central policy still matches it; otherwise refuse."""
     bundle = latest(session, target)
