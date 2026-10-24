@@ -30,6 +30,7 @@ from warden.ca import CA
 from warden.db import make_engine
 from warden.dispatch.server import Dispatcher
 from warden.errors import WardenError
+from warden.gatekeeper.panel import SwitchPanel, build_panel
 from warden.keys import OnlineKey
 from warden.mcp.http import build_app, identify_from_headers
 from warden.mcp.server import WardenMcp, build_server
@@ -52,15 +53,19 @@ def _peer_uid(writer: asyncio.StreamWriter) -> int | None:
 
 
 class Daemon:
-    def __init__(self, home: Path, load: Callable[[], Config]) -> None:
+    def __init__(self, home: Path, load: Callable[[], Config], *, config_dir: Path | None = None) -> None:
         self.home = home
         self._load = load
+        self._config_dir = config_dir or home / "config"
         self.engine = make_engine(home / "warden.db")
         self.config = self._fresh_config()
+        self.panel = SwitchPanel(build_panel(self._config_dir, self.engine))
         approval = ApprovalKey.load(home / "keys/approval.key")
         online = OnlineKey.load(home / "keys/online.key")
         ca = CA.load_or_create(home / "ca")
-        self.plans = PlanService(self.engine, config=lambda: self.config, approval_key=approval)
+        self.plans = PlanService(
+            self.engine, config=lambda: self.config, approval_key=approval, panel=self.panel
+        )
         self.registry = Registry(self.engine, ca, targets=lambda: self.config.targets)
         self.dispatcher = Dispatcher(
             engine=self.engine,
@@ -87,6 +92,7 @@ class Daemon:
     async def reload(self) -> dict[str, Any]:
         """After a publish: re-read config, push the latest bundles, apply lockdown, re-check plans."""
         self.config = self._fresh_config()
+        self.panel.inner = build_panel(self._config_dir, self.engine)
         pushed, killed = await self.dispatcher.policy_changed()
         invalidated = [p.id for p in self.plans.invalidate_against_current_policy()]
         log.info("policy v%s: pushed to %s", self.config.policy_version, ", ".join(pushed) or "nobody")

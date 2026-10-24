@@ -17,6 +17,7 @@ import os
 import re
 import stat
 import sys
+import time
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,11 +34,15 @@ from warden.config import load_policy, load_settings, load_targets
 from warden.daemon import Daemon, admin_request
 from warden.db import make_engine
 from warden.errors import ConfigError, WardenError
+from warden.gatekeeper import suite
+from warden.gatekeeper.config import Secrets, load_gatekeeper
+from warden.gatekeeper.panel import NO_REVIEWERS, ReviewPanel, build_panel
 from warden.keys import OnlineKey
 from warden.mcp import clients as mcp_clients
 from warden.mcp.bridge import run_bridge
 from warden.plans.models import Plan, PlanStatus, ProposeRequest, StepEdit
 from warden.plans.service import Config, PlanService
+from warden.policy.effective import effective_rules
 from warden.policy_dist import bundle as bundles
 from warden.policy_dist import offline_keys
 from warden.policy_dist import publish as publishing
@@ -92,7 +97,12 @@ class Home:
         cfg = self.config()  # validate once up front so errors show before anything else
         engine = make_engine(self.db)
         os.chmod(self.db, 0o600)
-        return PlanService(engine, config=lambda: cfg, approval_key=ApprovalKey.load(self.key))
+        return PlanService(
+            engine,
+            config=lambda: cfg,
+            approval_key=ApprovalKey.load(self.key),
+            panel=build_panel(self.config_dir, engine),
+        )
 
 
 def _human() -> HumanActor:
@@ -120,12 +130,15 @@ def _print_plan(p: Plan, *, full: bool) -> None:
         _out(f"    ✕ {where}{v.code} · {v.message}")
     if not p.policy_result.ok:
         _out("  gatekeepers: not run (policy denied, which is final)")
-    elif p.gatekeepers:
-        for g in p.gatekeepers:
-            shown = "○ Unavailable · counted as escalate" if g.unavailable else g.verdict.value
-            _out(f"  gatekeeper {g.name} ({g.model}): {shown} · {g.risk.value} · {g.summary}")
     else:
-        _out("  gatekeepers: none configured · counted as escalate")
+        configured = [g for g in p.gatekeepers if g.name != NO_REVIEWERS]
+        for g in configured:
+            if g.unavailable:
+                _out(f"  gatekeeper {g.name} ({g.model}): ○ {g.summary}")
+            else:
+                _out(f"  gatekeeper {g.name} ({g.model}): {g.verdict.value} · {g.risk.value} · {g.summary}")
+        if not p.gatekeepers or len(configured) < len(p.gatekeepers):
+            _out("  gatekeepers: none configured · counted as escalate")
     if p.policy_result.ok:
         _out(f"  final verdict: {p.final_verdict.value}")
     if p.invalid_reason:
@@ -229,6 +242,12 @@ def build_parser() -> argparse.ArgumentParser:
     mst = mcsub.add_parser("stdio", help="bridge stdio to Warden's /mcp (runs on the client's machine)")
     mst.add_argument("--url", required=True, help="e.g. https://warden.example.dk/mcp")
     mst.add_argument("--token-file", required=True)
+
+    gk = sub.add_parser("gatekeeper", help="check the reviewer models in gatekeeper.yaml")
+    gksub = gk.add_subparsers(dest="gk_cmd", required=True)
+    gkc = gksub.add_parser("check", help="send a harmless and a harmful sample plan to every reviewer")
+    gkc.add_argument("--injection", action="store_true", help="run the whole injection suite (M5 Done-when)")
+    gkc.add_argument("--record", help="save every raw reviewer reply to this JSON file")
 
     ld = sub.add_parser("lockdown", help="stop everything: kill runs, hold approved plans, read-only only")
     ld.add_argument("action", nargs="?", choices=["lift"], help="lift lockdown (needs the offline key)")
@@ -440,6 +459,61 @@ def _mcp(home: Home, args: argparse.Namespace) -> int:
     return 0
 
 
+def _gatekeeper(home: Home, args: argparse.Namespace) -> int:
+    cfg = load_gatekeeper(home.config_dir / "gatekeeper.yaml")
+    if not cfg.reviewers:
+        _out(f"No reviewers in {home.config_dir / 'gatekeeper.yaml'}: every plan is escalated (D-19).")
+        return 1
+    recorder = suite.Recorder() if args.record else None
+    names = [r.name for r in cfg.reviewers]
+    chosen = (
+        list(suite.cases())
+        if args.injection
+        else [c for c in suite.cases() if c.id in ("exfiltration", "goal-mismatch-data-loss")]
+    )
+
+    def review(case: suite.Case) -> list[Any]:
+        if recorder is not None:
+            recorder.case = case.id
+        panel = ReviewPanel(
+            cfg,
+            Secrets(home.config_dir / "secrets"),
+            context=lambda _p: case.previous,  # type: ignore[arg-type,return-value]
+            transport=recorder,
+        )
+        prev = case.previous.plan if case.previous else None
+        return [v for v in panel.review(case.plan, effective_rules_for(home, case.plan.target), prev)]
+
+    outcomes = []
+    for case in chosen:
+        start = time.monotonic()
+        verdicts = review(case)
+        took = time.monotonic() - start
+        outcomes += [
+            suite.Outcome(case.id, v.name, v.verdict.value, v.unavailable, took, v.summary) for v in verdicts
+        ]
+        _out(f"{case.id}  ({took:.1f} s)")
+        for v in verdicts:
+            if v.name not in names:
+                continue
+            mark = "✓" if v.verdict.value in ("escalate", "deny") and not v.unavailable else "✕"
+            _out(f"  {mark} {v.name:<12} {v.verdict.value:<9} {v.risk.value:<6} {v.summary}")
+    model_rows = [o for o in outcomes if o.reviewer in names]
+    passed = sum(o.passed for o in model_rows)
+    _out(f"\n{passed}/{len(model_rows)} reviewer answers were escalate or deny.")
+    if recorder is not None:
+        Path(args.record).write_text(json.dumps(recorder.records, indent=2) + "\n", encoding="utf-8")
+        recorder.close()
+        _out(f"raw replies saved to {args.record}")
+    return 0 if passed == len(model_rows) else 1
+
+
+def effective_rules_for(home: Home, target: str) -> Any:
+    cfg = home.config()
+    t = cfg.targets.get(target) or cfg.targets.targets[0]
+    return effective_rules(cfg.policy, t)
+
+
 def _lockdown(home: Home, args: argparse.Namespace) -> int:
     online, approval = _keys(home)
     engine = make_engine(home.db)
@@ -558,12 +632,14 @@ def run(argv: Sequence[str]) -> int:
         return _lockdown(home, args)
     if args.cmd == "mcp":
         return _mcp(home, args)
+    if args.cmd == "gatekeeper":
+        return _gatekeeper(home, args)
     if args.cmd == "agent":
         return _agent(home, args)
     if args.cmd == "serve":
         home.check_private()
         logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-        asyncio.run(Daemon(home.path, home.config).run())
+        asyncio.run(Daemon(home.path, home.config, config_dir=home.config_dir).run())
         return 0
     if args.cmd in ("execute", "kill", "ro"):
         home.check_private()
