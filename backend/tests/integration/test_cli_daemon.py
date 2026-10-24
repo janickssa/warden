@@ -1,10 +1,12 @@
-"""The M2 and M3 flows exactly as a human runs them, as automated dry runs of docs/m2-demo.md and
-docs/m3-demo.md.
+"""The M2, M3 and M4 flows exactly as a human runs them, as automated dry runs of docs/m2-demo.md,
+docs/m3-demo.md and docs/m4-demo.md.
 
 M2: `warden serve`, `warden agent add/confirm`, `warden-agent enroll` and `run`, then propose → approve →
 `warden execute` → fail → revise, plus `warden ro` and `warden kill`.
 M3: `warden-sign keygen`, `warden keys offline register`, tighten → pushed at once, loosen → pending →
 `warden-sign sign` → `warden policy sign-upload`, lockdown and lift.
+M4: `warden mcp add`, then Claude's whole loop over Streamable HTTP with a bearer token against the real
+agent, a human approving with the CLI meanwhile; the stdio bridge; refusals without a token.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ import tempfile
 import time
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from harness import agent_binary, go_binary
@@ -51,6 +54,7 @@ class Box:
         self.state.mkdir(mode=0o700)
         os.chown(self.state, self.user.pw_uid, self.user.pw_gid)
         self.port = free_port()
+        self.mcp_port = free_port()
         (self.cfg / "policy.yaml").write_text(
             "deny_paths: [/etc, /root, /home]\ncommands:\n  allow:\n    echo: {}\n    sleep: {}\n    ls: {}\n"
             '    "false": {}\n    "true": {}\n'
@@ -58,6 +62,8 @@ class Box:
         (self.cfg / "targets.yaml").write_text(f"- {{name: dev, workspace_roots: [{self.ws}]}}\n")
         (self.cfg / "settings.yaml").write_text(
             f"agents: {{listen_host: 127.0.0.1, listen_port: {self.port}, server_names: [127.0.0.1]}}\n"
+            f"mcp: {{listen_host: 127.0.0.1, listen_port: {self.mcp_port}}}\n"
+            "server: {public_url: 'https://warden.example.dk'}\n"
         )
         self.procs: list[subprocess.Popen[bytes]] = []
 
@@ -325,3 +331,156 @@ def test_m3_dry_run(box: Box) -> None:
     wait_until(lambda: "succeeded" in box.warden("plan", "show", p).stdout, timeout=10)
     assert "LOCKDOWN" not in box.warden("policy", "status").stdout
     assert "Hash chain verified" in box.warden("audit", "verify").stdout
+
+
+def test_m4_dry_run(box: Box) -> None:
+    import asyncio
+    import threading
+
+    import httpx2
+    from mcp import Client, StdioServerParameters
+    from mcp.client.streamable_http import streamable_http_client
+
+    box.warden("init")
+    box.warden("policy", "publish")
+    out = box.warden("mcp", "add", "claude-code").stdout
+    token = next(t for t in out.split() if t.startswith("wdn_mcp_"))
+    assert "claude mcp add --transport http warden https://warden.example.dk/mcp" in out
+    assert "claude-code" in box.warden("mcp", "list").stdout
+    box.start()
+    box.enroll_and_run()
+    url = f"http://127.0.0.1:{box.mcp_port}/mcp"
+    wait_until(lambda: httpx2.get(f"http://127.0.0.1:{box.mcp_port}/healthz").status_code in (200, 404))
+
+    # No token, a wrong token or a foreign Host never reach the MCP layer.
+    init = {"jsonrpc": "2.0", "id": 1, "method": "ping"}
+    assert httpx2.post(url, json=init).status_code == 401
+    assert httpx2.post(url, json=init, headers={"Authorization": "Bearer wdn_mcp_nope"}).status_code == 401
+    foreign = httpx2.post(
+        url, json=init, headers={"Authorization": f"Bearer {token}", "Host": "evil.example.com"}
+    )
+    assert foreign.status_code in (403, 421)
+
+    def data(r: Any) -> dict[str, Any]:
+        assert not r.is_error, r.content
+        sc = r.structured_content
+        return sc.get("result", sc) if set(sc) == {"result"} else sc
+
+    def approve_later(plan_id: str) -> threading.Thread:
+        def go() -> None:
+            time.sleep(1)
+            box.approve(plan_id)
+
+        t = threading.Thread(target=go)
+        t.start()
+        return t
+
+    def step(n: int, command: str) -> dict[str, Any]:
+        return {
+            "n": n,
+            "kind": "shell",
+            "command": command,
+            "purpose": f"Step {n}",
+            "cwd": str(box.ws),
+            "timeout_s": 60,
+        }
+
+    async def claude() -> None:
+        http = httpx2.AsyncClient(
+            headers={"Authorization": f"Bearer {token}"}, timeout=httpx2.Timeout(30, read=300)
+        )
+        async with http, Client(streamable_http_client(url, http_client=http)) as c:
+            names = sorted(t.name for t in (await c.list_tools()).tools)
+            assert names == sorted(
+                [
+                    "propose_plan",
+                    "get_plan",
+                    "wait_for_approval",
+                    "execute_plan",
+                    "diff_plans",
+                    "read_only",
+                    "list_resources",
+                    "post_diagnosis",
+                ]
+            )
+            res = data(await c.call_tool("list_resources", {}))
+            assert res["targets"][0]["target"] == "dev"
+            assert res["targets"][0]["online"] is True
+
+            p = data(
+                await c.call_tool(
+                    "propose_plan",
+                    {
+                        "goal": "M4 dry run",
+                        "target": "dev",
+                        "steps": [step(1, "echo step one"), step(2, "false")],
+                    },
+                )
+            )
+            assert p["status"] == "awaiting_approval"
+            assert p["requested_by"] == "claude-code"
+            t = approve_later(p["plan_id"])
+            waited = data(await c.call_tool("wait_for_approval", {"plan_id": p["plan_id"], "timeout_s": 60}))
+            await asyncio.to_thread(t.join)
+            assert waited["status"] == "approved"
+
+            done = data(await c.call_tool("execute_plan", {"plan_id": p["plan_id"]}))
+            assert done["status"] == "failed"
+            assert done["failed_at"] == 2
+            assert "step one" in done["steps"][0]["output_untrusted"]["text"]
+
+            ro = data(await c.call_tool("read_only", {"target": "dev", "command": f"ls {box.ws}"}))
+            assert ro["ok"] is True
+            diag = data(
+                await c.call_tool(
+                    "post_diagnosis",
+                    {
+                        "plan_id": p["plan_id"],
+                        "note": "Step 2 is `false`; drop it.",
+                        "read_only_audit_ids": [ro["audit_id"]],
+                    },
+                )
+            )
+            assert diag["evidence"][0]["command"] == f"ls {box.ws}"
+
+            r = data(
+                await c.call_tool(
+                    "propose_plan",
+                    {
+                        "goal": "M4 dry run",
+                        "target": "dev",
+                        "revises": p["plan_id"],
+                        "steps": [step(1, "echo step one"), step(2, "true")],
+                    },
+                )
+            )
+            diff = data(await c.call_tool("diff_plans", {"old_id": p["plan_id"], "new_id": r["plan_id"]}))
+            assert [row["op"] for row in diff["rows"]] == ["same", "removed", "added"]
+            assert (
+                "not_approved"
+                in (await c.call_tool("execute_plan", {"plan_id": r["plan_id"]})).content[0].text
+            )
+            t = approve_later(r["plan_id"])
+            await c.call_tool("wait_for_approval", {"plan_id": r["plan_id"], "timeout_s": 60})
+            await asyncio.to_thread(t.join)
+            ok = data(await c.call_tool("execute_plan", {"plan_id": r["plan_id"]}))
+            assert ok["status"] == "succeeded"
+
+        # The stdio bridge, as a stdio-only client would start it.
+        token_file = box.root / "mcp-token"
+        token_file.write_text(token + "\n")
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "warden.cli", "mcp", "stdio", "--url", url, "--token-file", str(token_file)],
+            env={**os.environ, "PYTHONPATH": str(REPO / "backend/src")},
+        )
+        async with Client(params) as c:
+            got = data(await c.call_tool("get_plan", {"plan_id": r["plan_id"]}))
+            assert got["status"] == "succeeded"
+
+    asyncio.run(claude())
+    log = box.warden("audit", "export").stdout
+    assert '"actor":"claude-code"' in log
+    assert "diagnosis_posted" in log
+    box.warden("mcp", "revoke", "claude-code")
+    assert httpx2.post(url, json=init, headers={"Authorization": f"Bearer {token}"}).status_code == 401
