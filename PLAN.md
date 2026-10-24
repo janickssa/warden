@@ -499,7 +499,9 @@ pause (no approval) / resume (re-approval if template changed); run through the 
 failure → notify and stop.
 
 ## M8 iPhone app — outline
-Use the `iphone-app` skill and its Linux pipeline: SwiftPM + `xtool.yml`, Forgejo `ios` runner, `ship.sh`.
+**Required (confirmed 24.10.2026).** Build it with the new iOS skill the owner provides at M8 (load it before
+writing any Swift; it takes precedence over this outline where they differ). Until then, the outline is: the
+`iphone-app` skill and its Linux pipeline: SwiftPM + `xtool.yml`, Forgejo `ios` runner, `ship.sh`.
 `WardenCore` (Foundation-only: models, decoding, formatters, verdict/state logic incl. gatekeeper-
 unavailable and the final-verdict calculation) with `swift test` on Linux. Face ID-gated passkey
 approval, actionable APNs notifications, press-and-hold 2 s kill switch and lockdown. Bug fix (3)

@@ -499,8 +499,9 @@ Plans longer than `chat_max_steps` (setting, default 10) show a summary and a da
 - Approval requires a fresh action per plan. No "approve all".
 - Screens, layout and states: see section 17.
 
-### 10.3 iPhone app (later)
+### 10.3 iPhone app (M8, required)
 
+- **Confirmed: Warden ships with a native iPhone app.** It is built at M8 with the iOS build skill you provide then, which follows the Linux pipeline below.
 - SwiftUI app on the same REST + WebSocket API. APNs push for "awaiting approval", "plan failed" and "scheduled run finished".
 - Approve/reject from an actionable notification, with Face ID required to approve.
 - Must follow the existing Linux iOS pipeline: SwiftPM + `xtool.yml`, no Xcode project files, built and shipped by the Forgejo `ios` runner via `ship.sh`. API models and decoding live in a Foundation-only `WardenCore` package so `swift test` runs on Linux.

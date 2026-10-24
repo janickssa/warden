@@ -17,6 +17,7 @@ have done so are raised as questions instead.
 | D-03 | Public MCP OAuth (M9) | Not decided. **I'll stop and ask before starting M9.** |
 | D-04 | Offline key | **No YubiKey for now.** The offline key is an ed25519 key file made by `warden-sign keygen` on your laptop, encrypted at rest with a passphrase (scrypt + XChaCha20-Poly1305) and never copied to a server. A **backup offline key** is a second key file kept somewhere else (e.g. a USB stick in a drawer); the UI warns until one is registered. The signer is behind an interface, so YubiKey support can be added later without changing bundles or agents. |
 | D-05 | Offline key algorithm | Pure **ed25519** with key files. Bundles still carry `alg` per signature, and agents accept only the algorithm pinned for each key. If you later buy a YubiKey: PIV supports Ed25519 only from firmware 5.7, so either buy a 5.7+ model (anything sold new in 2026 should be) or allow ECDSA P-256 for that key. That can be decided then. |
+| D-22 | iPhone app ✅ confirmed | The native iPhone app (M8) is required, not optional. It will be built with the iOS build skill you provide at M8. That skill takes precedence over PLAN.md's M8 outline, within README §16 rule 10 (Linux pipeline). The web dashboard's phone layout stays basic, as in README §17.3. |
 | D-06 | UI language | English by default, with a Dansk option per README §17.2. Units are always metric. |
 
 ## B. Refinements that make the spec stricter (README will be updated when the milestone lands)
