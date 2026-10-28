@@ -15,3 +15,4 @@ engine's own tests.
   - `expect`: `allow` or `deny`
   - `code`: for `deny`, a violation code that must be among the reasons
 - `canonical_vectors.json`: canonical JSON + SHA-256 vectors for plan hashing.
+- `cron_vectors.json`: schedule cron slots in Europe/Copenhagen (incl. DST days) and refused expressions (M7).

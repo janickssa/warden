@@ -39,7 +39,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 | M4 ☑ | MCP | MCPServer tools (§6 + `post_diagnosis`), Streamable HTTP + stdio bridge, MCP client tokens (elicitation moved to M6, M4-03) | Works end-to-end from Claude Code over WireGuard | `test_cli_daemon.py::test_m4_dry_run` (real HTTP, real agent) + manual Claude Code session in `docs/m4-demo.md` |
 | M5 ◐ | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
 | M6 ☑ | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | `web/e2e/dashboard.spec.ts` (real `warden serve`, virtual passkey) + manual check over VPN in `docs/m6-demo.md` |
-| M7 | Schedules | Templates, APScheduler cron, expiry, pause/resume, failure notify | Nightly job runs and reports | Time-travel scheduler test + one real nightly run |
+| M7 ◐ | Schedules | Signed schedule grants checked by agents, cron, expiry, pause/resume, failure notify | Nightly job runs and reports | Integration test with the real agent + time-travel scheduler tests + one real nightly run |
 | M8 | iPhone app | SwiftUI app, `WardenCore` package, APNs, Face ID, lockdown, approve with edits | Approve from the lock screen | `swift test` on Linux (WardenCore + view models) + TestFlight manual check |
 | M9 | Public MCP | Public NPM host for `/mcp` only, OAuth | Works from the Claude app without VPN | **Ask before starting** (OAuth design choice, §18) |
 | M10 | Agent updates | Offline-signed binaries, canary rollout, auto-rollback | New agent version rolls out with no manual steps | Integration test: canary + rollback on missing heartbeat |
@@ -767,10 +767,97 @@ Differences from the plan above:
   retention pruning (M6-09).
 - The policy test suite runs with every preview instead of behind a "Run tests" button (M6-06).
 
-## M7 Schedules — outline
-Template approval → hash-pinned schedule; APScheduler (Europe/Copenhagen); default expiry 90 days;
-pause (no approval) / resume (re-approval if template changed); run through the normal dispatcher;
-failure → notify and stop.
+## M7 Schedules — detailed plan
+
+README §11: a schedule is a plan template the human approved once, with an explicit scope (target, cron,
+expiry). The hard part is invariant 10. A plan approval binds one plan ID and expires within minutes, so it
+can't authorise runs for 90 days. Without a new grant, the agent would have to trust Warden's word that a run
+is "the nightly job". So a schedule gets **its own signed grant**, and **the agent checks every run against
+it**: the template hash, the signature (passkey with e2e), the expiry, the cron slot and a one-time claim per
+slot. A compromised Warden can't run the template at other times, more often, after expiry, or with other
+steps.
+
+### The grant (shared by Python and Go, with vectors in `policy-fixtures/schedule_vectors.json`)
+- **Template:** `{v: 1, schedule_id: "sch_…", target, goal, steps}`, hashed with the canonical plan hash.
+  The steps are exactly the source plan's steps.
+- **Grant payload:** `{v: 1, kind: "schedule", schedule_id, template_hash, target, cron,
+  tz: "Europe/Copenhagen", approved_at, expires_at, by}`.
+  - Signed by the approval key under the domain `warden-schedule-v1\n`, so a plan approval and a schedule
+    grant can never be swapped.
+  - The passkey signs the SHA-256 of the same message. A passkey is **always** required for a schedule:
+    it's a standing approval.
+- **Each run:** the `run` message carries the template and grant, plus an unsigned
+  `schedule: {run_id, slot}`. The agent refuses the run unless:
+  - the hash, signature and passkey verify (with the bundle's trust, as for plans);
+  - the target is its own;
+  - `approved_at ≤ slot < expires_at`;
+  - the slot matches the cron in Europe/Copenhagen;
+  - `slot − 1 min ≤ now ≤ slot + 15 min`;
+  - the claim `sch_…@slot` is new in `executed.log`.
+  Events report `run_id`, which is Warden's plan ID for that run.
+- **Expiry:** at most 180 days, defaulting to `schedules.default_expiry_days` (30, 90 or 180). The agent also
+  refuses a grant longer than 180 days.
+
+### Cron (`backend/src/warden/schedules/cron.py`, `agent/internal/cron`, shared vectors)
+- Five fields with lists, ranges and steps, and `*`. Day of week 0–7 (0 and 7 are Sunday).
+- Vixie OR rule when both day of month and day of week are restricted.
+- Evaluated in local Copenhagen time, at whole minutes.
+- DST: a wall time that doesn't exist is skipped. A repeated wall time fires once, at its first occurrence.
+- Own implementation, not APScheduler: Warden and the agent must agree on every slot (M7-01).
+
+### Backend
+- `schedules/service.py`, table `schedules`:
+  - **create** from a succeeded plan, by a human: name, cron, expiry days, `on_failure: notify_and_stop`.
+    It's checked against policy now and starts as `awaiting_approval`.
+  - **approve** with a passkey.
+  - **pause** (no approval), **resume** (a human action; impossible after expiry or invalidation),
+    **delete**.
+  - States: `awaiting_approval | active | paused | stopped | expired | invalidated | deleted`.
+- `schedules/scheduler.py`: an asyncio loop every 20 s. For each active schedule, the newest due slot within
+  15 min that hasn't fired:
+  - expired → `expired`;
+  - lockdown, agent offline or behind → a recorded **missed** run (not a failure);
+  - the current policy denies the template → `invalidated` + notify;
+  - otherwise a run plan.
+  A publish also re-checks every active schedule.
+- **Run plans** are real plans (`requested_by: scheduler`, `schedule_id`, `slot`), created straight into
+  `approved` with the grant as their approval, then dispatched as usual (output, kill, held, audit).
+  - On success: `scheduled_run_finished`.
+  - On failure: the schedule is `stopped` and notified; Claude can propose a fix the normal way.
+- **Notifications:** an outbox table (`notifications`). The iPhone app delivers it in M8. The dashboard shows
+  the entries in the feed and as toasts.
+- **API:** `GET /schedules`, `GET /schedules/{id}`, `POST /plans/{id}/schedule`,
+  `POST /schedules/{id}/approval/options`, `POST /schedules/{id}/approve`, `…/pause`, `…/resume`,
+  `…/delete`.
+- **CLI:** `warden schedule list|show|pause|resume|delete`. There's no approve: schedules need a passkey.
+- **No MCP tool:** Claude can't create schedules (D-14 "no other tools"). `get_plan` shows a run's
+  `schedule_id`.
+
+### Web
+- **Schedules page** (spec 7): name, target, when in plain language plus the cron, next run, last result,
+  expiry, state.
+- **Schedule page:** the full commands, a scroll gate, Approve & sign (passkey), Pause / Resume / Delete, and
+  recent runs.
+- **Save as schedule** on a succeeded plan: name, cron presets or custom, expiry.
+- Feed type `schedule`, Danish, all 17.6 states.
+
+### Tests
+- Cron vectors in Python and Go, including DST days in Copenhagen.
+- Schedule grant vectors signed in Python and verified in Go, with every refusal: tampered template, wrong
+  domain, expired, slot off-cron, too early or late, replayed slot, no passkey with e2e, longer than 180 days.
+- Service and scheduler with a fake clock (time travel over DST and expiry); API refusals.
+- **Done when** (integration, real agent): a plan succeeds → saved as a schedule → approved with a passkey →
+  the scheduler fires at the slot → the agent verifies the grant and runs → the run succeeds and is reported
+  (last result, feed, notification). A failing template stops the schedule and notifies. A replayed slot is
+  refused by the agent itself.
+- **Playwright:** save as schedule, approve with the passkey, pause and resume.
+
+### Commits
+1. `cron: shared evaluator (Python + Go) with vectors`
+2. `schedules: signed grants, verified by agents`
+3. `schedules: service, scheduler, API, CLI`
+4. `web: schedules`
+5. `docs: M7`
 
 ## M8 iPhone app — outline
 **Required (confirmed 24.10.2026).** Build it with the new iOS skill the owner provides at M8 (load it before
