@@ -580,6 +580,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plans/{plan_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create
+         * @description "Save as schedule": a new schedule waiting for its own approval.
+         */
+        post: operations["create_api_plans__plan_id__schedule_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/policy": {
         parameters: {
             query?: never;
@@ -706,13 +726,115 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Schedules
-         * @description Schedules arrive in M7.
-         */
-        get: operations["schedules_api_schedules_get"];
+        /** List Schedules */
+        get: operations["list_schedules_api_schedules_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedules/{schedule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Schedule */
+        get: operations["get_schedule_api_schedules__schedule_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedules/{schedule_id}/approval/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approval Options
+         * @description Fixes the approval time now; the passkey's challenge is this exact grant.
+         */
+        post: operations["approval_options_api_schedules__schedule_id__approval_options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedules/{schedule_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve */
+        post: operations["approve_api_schedules__schedule_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedules/{schedule_id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete */
+        post: operations["delete_api_schedules__schedule_id__delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedules/{schedule_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause */
+        post: operations["pause_api_schedules__schedule_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedules/{schedule_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume */
+        post: operations["resume_api_schedules__schedule_id__resume_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -963,7 +1085,7 @@ export interface components {
              * Purpose
              * @enum {string}
              */
-            purpose: "login" | "approve" | "publish" | "add_passkey" | "remove_passkey" | "settings" | "lockdown";
+            purpose: "login" | "approve" | "approve_schedule" | "publish" | "add_passkey" | "remove_passkey" | "settings" | "lockdown";
             /**
              * Subject
              * @default
@@ -1537,6 +1659,121 @@ export interface components {
             online: boolean;
             /** Version */
             version: number | null;
+        };
+        /** ScheduleDetail */
+        ScheduleDetail: {
+            /** Approved At */
+            approved_at: string | null;
+            /** Approved By */
+            approved_by: string | null;
+            /** Created At */
+            created_at: string;
+            /** Created By */
+            created_by: string;
+            /** Cron */
+            cron: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Expiry Days */
+            expiry_days: number;
+            /** Final Verdict */
+            final_verdict?: ("allow" | "escalate" | "deny") | null;
+            /** Goal */
+            goal: string;
+            /** Id */
+            id: string;
+            /** Last Detail */
+            last_detail: string | null;
+            /** Last Result */
+            last_result: string | null;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Last Run Id */
+            last_run_id: string | null;
+            /** Name */
+            name: string;
+            /** Next Run */
+            next_run: string | null;
+            /** Passkey */
+            passkey?: string | null;
+            /** Risk */
+            risk?: ("low" | "medium" | "high") | null;
+            /** Runs */
+            runs: components["schemas"]["PlanSummary"][];
+            /** Source Plan */
+            source_plan: string;
+            /** Status */
+            status: string;
+            /** Status Reason */
+            status_reason: string | null;
+            /** Step List */
+            step_list: components["schemas"]["StepView"][];
+            /** Steps */
+            steps: number;
+            /** Target */
+            target: string;
+            /** Template Hash */
+            template_hash: string;
+            /** When */
+            when: string;
+        };
+        /** ScheduleIn */
+        ScheduleIn: {
+            /** Cron */
+            cron: string;
+            /** Days */
+            days?: number | null;
+            /** Name */
+            name: string;
+        };
+        /** ScheduleView */
+        ScheduleView: {
+            /** Approved At */
+            approved_at: string | null;
+            /** Approved By */
+            approved_by: string | null;
+            /** Created At */
+            created_at: string;
+            /** Created By */
+            created_by: string;
+            /** Cron */
+            cron: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Expiry Days */
+            expiry_days: number;
+            /** Goal */
+            goal: string;
+            /** Id */
+            id: string;
+            /** Last Detail */
+            last_detail: string | null;
+            /** Last Result */
+            last_result: string | null;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Last Run Id */
+            last_run_id: string | null;
+            /** Name */
+            name: string;
+            /** Next Run */
+            next_run: string | null;
+            /** Passkey */
+            passkey?: string | null;
+            /** Source Plan */
+            source_plan: string;
+            /** Status */
+            status: string;
+            /** Status Reason */
+            status_reason: string | null;
+            /** Steps */
+            steps: number;
+            /** Target */
+            target: string;
+            /** Template Hash */
+            template_hash: string;
+            /** When */
+            when: string;
         };
         /** SessionView */
         SessionView: {
@@ -2675,6 +2912,41 @@ export interface operations {
             };
         };
     };
+    create_api_plans__plan_id__schedule_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_policy_api_policy_get: {
         parameters: {
             query?: never;
@@ -2865,7 +3137,7 @@ export interface operations {
             };
         };
     };
-    schedules_api_schedules_get: {
+    list_schedules_api_schedules_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2880,9 +3152,197 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    }[];
+                    "application/json": components["schemas"]["ScheduleView"][];
+                };
+            };
+        };
+    };
+    get_schedule_api_schedules__schedule_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approval_options_api_schedules__schedule_id__approval_options_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproveOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_api_schedules__schedule_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_api_schedules__schedule_id__delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_api_schedules__schedule_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_api_schedules__schedule_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

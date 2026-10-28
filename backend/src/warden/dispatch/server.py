@@ -444,7 +444,7 @@ class Dispatcher:
     async def execute(self, plan_id: str, *, wait: bool = True) -> Plan:
         """Send an approved plan to its agent (README 6 execute_plan). Holds it if the agent can't run it."""
         plan = self._plans.get(plan_id)
-        self._plans.validate_for_dispatch(plan_id)
+        envelope = self._plans.validate_for_dispatch(plan_id)
         cfg = self._config()
         try:
             with Session(self._engine) as s:
@@ -452,39 +452,39 @@ class Dispatcher:
         except bundles.PolicyUnpublished as exc:
             self._audit("warden", "dispatch_refused", plan_id, code=exc.code, message=exc.message)
             raise DispatchRefused(exc.message, code=exc.code) from exc
-        if self._locked():
-            return self._plans.hold(plan_id, "lockdown")
-        sess = self.sessions.get(plan.target)
-        latest = self._latest_version(plan.target)
-        if sess is None or sess.policy_version < latest:
-            why = (
-                f"{plan.target} is offline"
-                if sess is None
-                else f"{plan.target} is behind on policy (v{sess.policy_version}, latest v{latest})"
-            )
+        why = self.cannot_run(plan.target)
+        if why is not None:
+            if plan.schedule_id is not None:  # a slot can't wait: the agent would refuse it later anyway
+                return self._plans.expire_run(plan_id, why)
             return self._plans.hold(plan_id, why)
+        sess = self.sessions[plan.target]
         plan = self._plans.start_run(plan_id)
         if plan.approval is None:
             raise DispatchRefused(f"{plan_id} has no approval", code="not_approved")
         run = ActiveRun(plan=plan, agent=plan.target)
         self.runs[plan_id] = run
         a = plan.approval
+        if envelope.schedule is not None:
+            body: dict[str, Any] = {
+                "template": envelope.template,
+                "plan_hash": envelope.plan_hash,
+                "schedule": envelope.schedule,
+            }
+        else:
+            body = {
+                "template": plan.template(),
+                "plan_hash": plan.hash,
+                "approval": {
+                    "by": a.by,
+                    "at": a.at.isoformat(),
+                    "expires_at": plan.expires_at.isoformat(),
+                    "hash": a.hash,
+                    "signature": a.signature.model_dump(),
+                    "passkey": a.passkey.model_dump() if a.passkey else None,
+                },
+            }
         try:
-            await sess.ws.send(
-                protocol.encode(
-                    "run",
-                    template=plan.template(),
-                    plan_hash=plan.hash,
-                    approval={
-                        "by": a.by,
-                        "at": a.at.isoformat(),
-                        "expires_at": plan.expires_at.isoformat(),
-                        "hash": a.hash,
-                        "signature": a.signature.model_dump(),
-                        "passkey": a.passkey.model_dump() if a.passkey else None,
-                    },
-                )
-            )
+            await sess.ws.send(protocol.encode("run", **body))
         except ConnectionClosed:
             self._fail_disconnected(run)
         if not wait:
@@ -496,6 +496,18 @@ class Dispatcher:
             run.outcomes.append(StepOutcome(n=len(run.outcomes) + 1, exit_code=None, timed_out=True))
             self._finish(run)
             return await run.done
+
+    def cannot_run(self, target: str) -> str | None:
+        """Why a plan for this target can't start now (lockdown, agent offline or behind), or None."""
+        if self._locked():
+            return "lockdown"
+        sess = self.sessions.get(target)
+        latest = self._latest_version(target)
+        if sess is None:
+            return f"{target} is offline"
+        if sess.policy_version < latest:
+            return f"{target} is behind on policy (v{sess.policy_version}, latest v{latest})"
+        return None
 
     def execute_in_background(self, plan_id: str) -> asyncio.Task[Plan]:
         """Start `execute` as a task the dispatcher owns, so a caller that stops waiting doesn't cancel it."""

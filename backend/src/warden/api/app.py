@@ -28,6 +28,7 @@ ASGI = Callable[[Scope, Any, Any], Awaitable[None]]
 STATUS = {
     "not_found": 404,
     "decided_elsewhere": 409,
+    "wrong_state": 409,
     "not_human": 403,
     "passkey_required": 403,
     "unknown_passkey": 403,

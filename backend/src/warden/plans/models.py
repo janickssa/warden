@@ -191,6 +191,9 @@ class Plan(Strict):
     step_results: tuple[StepResult, ...] = ()
     failed_at: int | None = None
     fail_reason: str | None = None
+    # A scheduled run (M7): its schedule and cron slot. Its `hash` and approval are the schedule's grant.
+    schedule_id: str | None = None
+    slot: datetime | None = None
     version: int = 0  # optimistic-concurrency counter in the store
 
     def template(self) -> dict[str, object]:

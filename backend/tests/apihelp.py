@@ -21,6 +21,7 @@ from warden.config import load_policy
 from warden.dispatch.server import Dispatcher
 from warden.keys import OnlineKey
 from warden.passkeys import Passkeys, RelyingParty
+from warden.schedules.service import ScheduleService
 from warden.signing import ApprovalKey
 
 ORIGIN = "http://localhost:3000"
@@ -86,6 +87,14 @@ def make_api(world: World, tmp: Path) -> Api:
         world.policy = load_policy(cfg_dir / "policy.yaml")
         return {"pushed": [], "killed": [], "invalidated": []}
 
+    approval = world.key if isinstance(world.key, ApprovalKey) else ApprovalKey.generate(tmp / "a.key")
+    schedules = ScheduleService(
+        world.engine,
+        world.svc,
+        approval_key=approval,
+        default_days=lambda: world.config().settings.schedules.default_expiry_days,
+        clock=world.clock,
+    )
     ctx = ApiContext(
         engine=world.engine,
         plans=world.svc,
@@ -94,9 +103,10 @@ def make_api(world: World, tmp: Path) -> Api:
         passkeys=Passkeys(world.engine, RelyingParty.from_url(ORIGIN)),
         config=world.config,
         online=online,
-        approval=world.key if isinstance(world.key, ApprovalKey) else ApprovalKey.generate(tmp / "a.key"),
+        approval=approval,
         config_dir=cfg_dir,
         reload=reload,
+        schedules=schedules,
         clock=world.clock,
     )
     app = create_api(ctx, EventBus(world.engine))

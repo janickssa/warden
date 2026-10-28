@@ -57,7 +57,9 @@ ALGS = [COSEAlgorithmIdentifier.EDDSA, COSEAlgorithmIdentifier.ECDSA_SHA_256]
 _NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$")
 USER_ID = b"warden-owner"
 
-Purpose = Literal["login", "approve", "publish", "add_passkey", "remove_passkey", "settings", "lockdown"]
+Purpose = Literal[
+    "login", "approve", "approve_schedule", "publish", "add_passkey", "remove_passkey", "settings", "lockdown"
+]
 
 
 class PasskeyRefused(WardenError):

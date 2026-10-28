@@ -28,6 +28,7 @@ from warden.errors import (
     InputRefused,
     NotHuman,
     SigningError,
+    WardenError,
 )
 from warden.gatekeeper.panel import NullPanel, Panel, final_verdict, plan_risk, safe_review
 from warden.keys import b64url, unb64url
@@ -44,6 +45,7 @@ from warden.plans.models import (
     Risk,
     Step,
     StepEdit,
+    Verdict,
 )
 from warden.plans.runs import RunResult, StepOutcome, reduce_run
 from warden.plans.state import REVISABLE
@@ -70,11 +72,13 @@ class Config:
 
 @dataclass(frozen=True)
 class DispatchEnvelope:
-    """What the dispatcher sends to the agent (M2): the hashed template plus the signed approval."""
+    """What the dispatcher sends to the agent (M2): the hashed template plus the signed approval. A
+    scheduled run (M7) sends the schedule's template and `schedule` (run ID, slot, signed grant) instead."""
 
     template: dict[str, object]
     plan_hash: str
     approval: Approval
+    schedule: dict[str, object] | None = None
 
 
 def _utcnow() -> datetime:
@@ -111,6 +115,8 @@ class PlanService:
         self._panel = panel or NullPanel()
         self._clock = clock
         self._resolver = resolver or LexicalResolver()
+        # Set by ScheduleService: validates a scheduled run against its schedule (M7).
+        self.scheduled_dispatch: Callable[[Plan], DispatchEnvelope] | None = None
 
     @property
     def resolver(self) -> PathResolver:
@@ -130,6 +136,10 @@ class PlanService:
         if t is None:
             raise InputRefused(f"unknown target {target}", code="unknown_target")
         return effective_rules(cfg.policy, t, version=cfg.policy_version, lockdown=cfg.lockdown)
+
+    def check_steps(self, target: str, steps: Sequence[Step]) -> PolicyResult:
+        """The current policy's verdict on these steps for this target (schedules re-check before runs)."""
+        return check_plan(tuple(steps), self._rules(target), self._resolver)
 
     def _audit(self, s: Session, actor: Actor | str, action: str, subject: str, **detail: Any) -> None:
         label = actor if isinstance(actor, str) else actor.label
@@ -551,6 +561,13 @@ class PlanService:
             raise self._refuse_dispatch(
                 plan_id, "not_approved", f"{plan_id} is {plan.status.value}, not approved"
             )
+        if plan.schedule_id is not None:
+            if self.scheduled_dispatch is None:
+                raise self._refuse_dispatch(plan_id, "no_schedules", "schedules aren't available here")
+            try:
+                return self.scheduled_dispatch(plan)
+            except WardenError as exc:
+                raise self._refuse_dispatch(plan_id, exc.code, exc.message) from exc
         if self._expire_if_due(plan):
             raise self._refuse_dispatch(plan_id, "expired", f"{plan_id}'s approval expired")
         recomputed = plan_hash(plan)
@@ -579,6 +596,68 @@ class PlanService:
             self._invalidate(plan, result)
             raise self._refuse_dispatch(plan_id, "policy_violation", f"{plan_id} no longer passes policy")
         return DispatchEnvelope(template=plan.template(), plan_hash=plan.hash, approval=plan.approval)
+
+    def create_scheduled_run(
+        self,
+        *,
+        schedule_id: str,
+        slot: datetime,
+        goal: str,
+        target: str,
+        steps: Sequence[Step],
+        template_hash: str,
+        approval: Approval,
+        source: Plan | None,
+        expires_at: datetime,
+    ) -> Plan:
+        """A schedule's run (M7): a real plan, created approved because the human approved the schedule.
+
+        Its hash and approval are the schedule's template hash and grant, which agents check themselves;
+        policy is checked now, and again by the dispatcher and the agent."""
+        result = check_plan(tuple(steps), self._rules(target), self._resolver)
+        now = self._now()
+        plan = Plan(
+            id=f"pln_{ULID()}",
+            revises=None,
+            goal=goal,
+            target=target,
+            requested_by="scheduler",
+            steps=tuple(steps),
+            hash=template_hash,
+            status=S.APPROVED,
+            policy_result=result,
+            gatekeepers=source.gatekeepers if source else (),
+            final_verdict=source.final_verdict if source else Verdict.ESCALATE,
+            approval=approval,
+            created_at=now,
+            expires_at=expires_at,
+            schedule_id=schedule_id,
+            slot=slot,
+        )
+        with Session(self._engine) as s, s.begin():
+            plan = store.insert(s, plan)
+            self._audit(
+                s,
+                "scheduler",
+                "schedule_fired",
+                plan.id,
+                schedule=schedule_id,
+                slot=slot.isoformat(),
+                hash=template_hash,
+                policy_ok=result.ok,
+            )
+        if not result.ok:
+            self._invalidate(plan, result)
+            raise DispatchRefused(f"{schedule_id}'s steps no longer pass policy", code="policy_violation")
+        return plan
+
+    def expire_run(self, plan_id: str, reason: str) -> Plan:
+        """A scheduled run that can't start in its slot (lockdown, agent away): it's missed, not held."""
+        with Session(self._engine) as s, s.begin():
+            current = store.get(s, plan_id)
+            plan = self._transition(s, current, S.EXPIRED, held_reason=reason)
+            self._audit(s, "scheduler", "schedule_missed", plan_id, schedule=plan.schedule_id, reason=reason)
+        return plan
 
     def start_run(self, plan_id: str) -> Plan:
         envelope = self.validate_for_dispatch(plan_id)

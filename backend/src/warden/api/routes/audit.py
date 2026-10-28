@@ -51,12 +51,23 @@ FEED_TYPES: dict[str, str] = {
     "bundle_rejected": "agent",
     "diagnosis_posted": "proposal",
     "diagnosis_requested": "proposal",
+    "schedule_created": "schedule",
+    "schedule_approved": "schedule",
+    "schedule_paused": "schedule",
+    "schedule_resumed": "schedule",
+    "schedule_deleted": "schedule",
+    "schedule_fired": "schedule",
+    "schedule_missed": "schedule",
+    "schedule_stopped": "schedule",
+    "schedule_expired": "schedule",
+    "schedule_invalidated": "schedule",
+    "scheduled_run_finished": "schedule",
 }
 LOCKDOWN = {"lockdown", "lockdown_lift"}
 
 
 AUDIT_KINDS: dict[str, re.Pattern[str]] = {
-    "plans": re.compile(r"propose|verdict|review|edit|expire|execute|run_|diagnos|hold|release"),
+    "plans": re.compile(r"propose|verdict|review|edit|expire|execute|run_|diagnos|hold|release|schedul"),
     "decisions": re.compile(r"approve|reject|kill"),
     "output": re.compile(r"read_only|step_"),
     "policy": re.compile(

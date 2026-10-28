@@ -198,6 +198,7 @@ class WardenMcp:
             "failed_at": p.failed_at,
             "fail_reason": p.fail_reason,
             "held_reason": p.held_reason,
+            "schedule_id": p.schedule_id,  # a scheduled run (M7): ask the human about its schedule
             "invalid_reason": p.invalid_reason,
             "reject_reason": p.reject_reason,
             "human_note": hn.note if (hn := diagnosis.human_note(self._engine, p.id)) else None,

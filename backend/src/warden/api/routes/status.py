@@ -50,9 +50,3 @@ def status(c: Ctx, me: SessionDep) -> sc.StatusView:
         language=facts.cfg.settings.ui.language,
         passkeys=len(active(c.engine)),
     )
-
-
-@router.get("/schedules")
-def schedules(_c: Ctx, _me: SessionDep) -> list[dict[str, str]]:
-    """Schedules arrive in M7."""
-    return []

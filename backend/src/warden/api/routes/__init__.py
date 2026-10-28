@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from warden.api.routes import agents, audit, auth, plans, policy, settings, status
+from warden.api.routes import agents, audit, auth, plans, policy, schedules, settings, status
 
 ROUTERS: list[APIRouter] = [
     auth.router,
     status.router,
     plans.router,
+    schedules.router,
     agents.router,
     policy.router,
     audit.router,

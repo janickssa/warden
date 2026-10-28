@@ -434,6 +434,45 @@ class GatekeeperStatus(BaseModel):
     why: str | None = None
 
 
+class ScheduleIn(In):
+    name: str = Field(max_length=63)
+    cron: str = Field(max_length=100)
+    days: int | None = None
+
+
+class ScheduleView(BaseModel):
+    id: str
+    name: str
+    target: str
+    goal: str
+    cron: str
+    when: str
+    status: str
+    status_reason: str | None
+    created_by: str
+    created_at: str
+    approved_by: str | None
+    approved_at: str | None
+    expires_at: str | None
+    expiry_days: int
+    next_run: str | None
+    last_result: str | None
+    last_detail: str | None
+    last_run_at: str | None
+    last_run_id: str | None
+    source_plan: str
+    template_hash: str
+    steps: int
+    passkey: str | None = None
+
+
+class ScheduleDetail(ScheduleView):
+    step_list: list[StepView]
+    runs: list[PlanSummary]
+    risk: Literal["low", "medium", "high"] | None = None
+    final_verdict: Literal["allow", "escalate", "deny"] | None = None
+
+
 class StatusView(BaseModel):
     me: str
     policy_version: int

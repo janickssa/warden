@@ -15,6 +15,7 @@ from warden.dispatch.server import Dispatcher
 from warden.keys import OnlineKey
 from warden.passkeys import Passkeys
 from warden.plans.service import Config, PlanService
+from warden.schedules.service import ScheduleService
 from warden.signing import ApprovalKey
 
 
@@ -30,6 +31,7 @@ class ApiContext:
     approval: ApprovalKey
     config_dir: Path
     reload: Callable[[], Awaitable[dict[str, Any]]]
+    schedules: ScheduleService | None = None
     clock: Callable[[], datetime] = field(default=lambda: datetime.now(UTC))
 
     def now(self) -> datetime:

@@ -47,6 +47,7 @@ from warden.policy.effective import effective_rules
 from warden.policy_dist import bundle as bundles
 from warden.policy_dist import offline_keys
 from warden.policy_dist import publish as publishing
+from warden.schedules.service import ScheduleService
 from warden.signing import ApprovalKey
 from warden.timeutil import fmt_datetime
 
@@ -255,6 +256,18 @@ def build_parser() -> argparse.ArgumentParser:
     pksub.add_parser("list")
     pkr = pksub.add_parser("remove")
     pkr.add_argument("name")
+
+    sc = sub.add_parser("schedule", help="schedules (create and approve them in the dashboard: passkey)")
+    scsub = sc.add_subparsers(dest="sc_cmd", required=True)
+    scsub.add_parser("list")
+    for name, what in (
+        ("show", "steps, grant and recent runs"),
+        ("pause", "stop firing (no approval needed)"),
+        ("resume", "fire again from the next slot"),
+        ("delete", "remove it"),
+    ):
+        scp = scsub.add_parser(name, help=what)
+        scp.add_argument("schedule", help="name or sch_… ID")
 
     gk = sub.add_parser("gatekeeper", help="check the reviewer models in gatekeeper.yaml")
     gksub = gk.add_subparsers(dest="gk_cmd", required=True)
@@ -472,6 +485,56 @@ def _mcp(home: Home, args: argparse.Namespace) -> int:
     return 0
 
 
+def _schedule(home: Home, args: argparse.Namespace) -> int:
+    plans = home.service()
+    cfg = home.config()
+    svc = ScheduleService(
+        make_engine(home.db),
+        plans,
+        approval_key=ApprovalKey.load(home.key),
+        default_days=lambda: cfg.settings.schedules.default_expiry_days,
+    )
+    now = datetime.now(UTC)
+    if args.sc_cmd == "list":
+        rows = svc.all()
+        if not rows:
+            _out("No schedules. Save a succeeded plan as a schedule in the dashboard.")
+        for s in rows:
+            nxt = s.next_slot(now)
+            last = f"{s.row.last_result} ({s.row.last_detail})" if s.row.last_result else "-"
+            _out(
+                f"{s.row.name:<24} {s.row.status:<18} {s.row.target:<10} {s.when:<28} "
+                f"next {fmt_datetime(nxt) if nxt else '-':<17} last {last}"
+            )
+        return 0
+    match = [s for s in svc.all() if args.schedule in (s.id, s.row.name) and s.status not in ("deleted",)]
+    if len(match) != 1:
+        raise WardenError(f"no single schedule {args.schedule!r}", code="not_found")
+    s = match[0]
+    if args.sc_cmd == "show":
+        _out(f"{s.id}  {s.row.name}  {s.status}  target={s.row.target}")
+        _out(f"  when:     {s.when} ({s.row.cron}, Europe/Copenhagen)")
+        _out(f"  hash:     {s.row.template_hash}")
+        if s.approved_at and s.expires_at:
+            _out(f"  approved: {fmt_datetime(s.approved_at)} by {s.row.approved_by}")
+            _out(f"  expires:  {fmt_datetime(s.expires_at)}")
+        if s.row.status_reason:
+            _out(f"  reason:   {s.row.status_reason}")
+        for st in s.steps:
+            _out(f"  {st.n}. [{st.kind.value}] {st.purpose}\n       $ {st.command}")
+        for p in svc.runs(s.id, 10):
+            _out(f"  run {p.id}  {p.status.value}  slot {fmt_datetime(p.slot) if p.slot else '-'}")
+        return 0
+    if args.sc_cmd == "pause":
+        svc.pause(s.id, _human())
+    elif args.sc_cmd == "resume":
+        svc.resume(s.id, _human())
+    else:
+        svc.delete(s.id, _human())
+    _out(f"{s.row.name}: {'paused' if args.sc_cmd == 'pause' else args.sc_cmd + 'd'}")
+    return 0
+
+
 def _passkey(home: Home, args: argparse.Namespace) -> int:
     home.check_private()
     engine = make_engine(home.db)
@@ -684,6 +747,8 @@ def run(argv: Sequence[str]) -> int:
         return _gatekeeper(home, args)
     if args.cmd == "passkey":
         return _passkey(home, args)
+    if args.cmd == "schedule":
+        return _schedule(home, args)
     if args.cmd == "agent":
         return _agent(home, args)
     if args.cmd == "serve":
