@@ -354,10 +354,7 @@ func versionOf(raw json.RawMessage) int {
 }
 
 func (a *Agent) startRun(ctx context.Context, run approval.Run, w *writer) {
-	var id struct {
-		PlanID string `json:"plan_id"`
-	}
-	_ = json.Unmarshal(run.Template, &id)
+	id := struct{ PlanID string }{runner.PlanIDOf(run)}
 	a.mu.Lock()
 	if len(a.active) > 0 {
 		a.mu.Unlock()

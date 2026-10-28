@@ -152,14 +152,21 @@ func intp(n int) *int { return &n }
 
 // Run verifies and executes one plan, reporting everything to sink.
 func (r *Runner) Run(ctx context.Context, run approval.Run, sink Sink, ctl *Control) {
-	tpl, err := approval.Verify(run, r.ApprovalKeys, r.Rules.Approvals, r.Target, r.Now())
+	var tpl *approval.Template
+	var claim string
+	var err error
+	if run.Schedule != nil { // a schedule's run: its grant, its cron slot, once (README 11)
+		tpl, claim, err = approval.VerifySchedule(run, r.ApprovalKeys, r.Rules.Approvals, r.Target, r.Now())
+	} else if tpl, err = approval.Verify(run, r.ApprovalKeys, r.Rules.Approvals, r.Target, r.Now()); err == nil {
+		claim = tpl.PlanID
+	}
 	if err != nil {
 		var ae *approval.Error
 		code := "bad_plan"
 		if errors.As(err, &ae) {
 			code = ae.Code
 		}
-		sink.Send(PlanRefused{PlanID: planIDOf(run), Code: code, Message: err.Error()})
+		sink.Send(PlanRefused{PlanID: PlanIDOf(run), Code: code, Message: err.Error()})
 		return
 	}
 	if r.Rules.Lockdown {
@@ -170,7 +177,7 @@ func (r *Runner) Run(ctx context.Context, run approval.Run, sink Sink, ctl *Cont
 		sink.Send(PlanRefused{PlanID: tpl.PlanID, Code: "too_many_steps", Message: "plan has more steps than limits.plan_max_steps"})
 		return
 	}
-	if err := r.Executed.Claim(tpl.PlanID, run.PlanHash); err != nil {
+	if err := r.Executed.Claim(claim, run.PlanHash); err != nil {
 		sink.Send(PlanRefused{PlanID: tpl.PlanID, Code: "replayed_plan", Message: err.Error()})
 		return
 	}
@@ -188,7 +195,11 @@ func (r *Runner) Run(ctx context.Context, run approval.Run, sink Sink, ctl *Cont
 	sink.Send(RunFinished{PlanID: tpl.PlanID})
 }
 
-func planIDOf(run approval.Run) string {
+// PlanIDOf names a run in events: the plan ID, or a scheduled run's run ID.
+func PlanIDOf(run approval.Run) string {
+	if run.Schedule != nil {
+		return run.Schedule.RunID
+	}
 	var t struct {
 		PlanID string `json:"plan_id"`
 	}

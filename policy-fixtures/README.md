@@ -16,3 +16,4 @@ engine's own tests.
   - `code`: for `deny`, a violation code that must be among the reasons
 - `canonical_vectors.json`: canonical JSON + SHA-256 vectors for plan hashing.
 - `cron_vectors.json`: schedule cron slots in Europe/Copenhagen (incl. DST days) and refused expressions (M7).
+- `schedule_vectors.json`: a schedule run signed in Python (approval key + passkey) that the agent must accept, and refuse when mutated (M7).

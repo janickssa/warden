@@ -1,0 +1,82 @@
+{
+ "approval_key": {
+  "key_id": "ed25519:121ba9b7ebdd6e5f",
+  "public": "JJ4YM1YdgE9yHJ09UOJbtHYTVjH14IV6e4GmvJX5naA"
+ },
+ "claim": "sch_01JB7Q3K0000000000000000SC@2026-10-21T01:00:00Z",
+ "now": "2026-10-21T01:02:00+00:00",
+ "run": {
+  "plan_hash": "sha256:5fedf6bdf108835f2000a522e90ce5bab658243b72c15f406469ed96e193fdd9",
+  "schedule": {
+   "grant": {
+    "approved_at": "2026-10-20T12:00:00+00:00",
+    "by": "dashboard:MacBook",
+    "cron": "0 3 * * *",
+    "expires_at": "2027-01-18T12:00:00+00:00",
+    "passkey": {
+     "authenticator_data": "kreU3B6rEIaamivv2w6e2kLOHKhxllql9piwbE8NlM4FAAAAAQ",
+     "client_data_json": "eyJ0eXBlIjogIndlYmF1dGhuLmdldCIsICJjaGFsbGVuZ2UiOiAiY0JnM1BXUnNVcmlUcXhjSFQxeEM5Y1hvVUk1Y204REtBcFMzcDh5VklibyIsICJvcmlnaW4iOiAiaHR0cHM6Ly93YXJkZW4uZXhhbXBsZS5kayIsICJjcm9zc09yaWdpbiI6IGZhbHNlfQ",
+     "credential_id": "8FOar__T8oiAHoi15jHCWw",
+     "signature": "MEYCIQCszc1vRVMKfDMQL7q-bWQefN0OvUg37UEnM_hI4X5kMAIhAPBf3pHoWn00YbqCwhOOK3xVlgWbs9Nd1WZvfxqvH6Q9"
+    },
+    "schedule_id": "sch_01JB7Q3K0000000000000000SC",
+    "signature": {
+     "by": "warden-approval-key",
+     "key_id": "ed25519:121ba9b7ebdd6e5f",
+     "sig": "ed25519:m4oghzos6jLy0YeeBsSe2t_Ju5hSLCE55MeseimZoTeogY78VK1TQKg9Qj6MlYaEGdyaB4VQ6jS7s4XP28E-Aw"
+    },
+    "target": "dev",
+    "template_hash": "sha256:5fedf6bdf108835f2000a522e90ce5bab658243b72c15f406469ed96e193fdd9",
+    "tz": "Europe/Copenhagen"
+   },
+   "run_id": "pln_01JB7Q3K0000000000000000RN",
+   "slot": "2026-10-21T01:00:00+00:00"
+  },
+  "template": {
+   "goal": "Nightly test of myapp",
+   "schedule_id": "sch_01JB7Q3K0000000000000000SC",
+   "steps": [
+    {
+     "captures": {},
+     "command": "git pull",
+     "cwd": "/srv/dev/myapp",
+     "expect_exit": 0,
+     "kind": "git",
+     "n": 1,
+     "purpose": "Update",
+     "timeout_s": 120
+    },
+    {
+     "captures": {},
+     "command": "npm test",
+     "cwd": "/srv/dev/myapp",
+     "expect_exit": 0,
+     "kind": "shell",
+     "n": 2,
+     "purpose": "Test",
+     "timeout_s": 300
+    }
+   ],
+   "target": "dev",
+   "v": 1
+  }
+ },
+ "trust": {
+  "approvers": [
+   {
+    "alg": -7,
+    "credential_id": "8FOar__T8oiAHoi15jHCWw",
+    "name": "MacBook",
+    "public": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE2UL2rCrzqjbl5pvQanDiz16pA_9P4gF39YdFacRK--y_rglS85gGk-d0p6jObN7TdnjTM2-CylXGElkLoDgppQ"
+   }
+  ],
+  "e2e": false,
+  "passkey": false,
+  "webauthn": {
+   "origins": [
+    "https://warden.example.dk"
+   ],
+   "rp_id": "warden.example.dk"
+  }
+ }
+}

@@ -20,6 +20,9 @@ from warden.plans.canonical import canonical_bytes
 from warden.plans.models import ApprovalSignature
 
 DOMAIN = b"warden-approval-v1\n"
+SCHEDULE_DOMAIN = (
+    b"warden-schedule-v1\n"  # schedule grants (M7): a different domain, so they can't be swapped
+)
 SIGNER = "warden-approval-key"
 
 
@@ -64,6 +67,11 @@ class ApprovalKey:
         sig = self._private.sign(approval_message(payload))
         return ApprovalSignature(by=SIGNER, key_id=self.key_id, sig="ed25519:" + b64url(sig))
 
+    def sign_grant(self, payload: Mapping[str, object]) -> ApprovalSignature:
+        """Sign a schedule grant (warden.schedules.grant)."""
+        sig = self._private.sign(SCHEDULE_DOMAIN + canonical_bytes(dict(payload)))
+        return ApprovalSignature(by=SIGNER, key_id=self.key_id, sig="ed25519:" + b64url(sig))
+
     def verifier(self) -> ApprovalVerifier:
         return ApprovalVerifier(self.public)
 
@@ -73,7 +81,9 @@ class ApprovalVerifier:
         self._public = public
         self.key_id = key_id_for(public)
 
-    def verify(self, payload: Mapping[str, object], signature: ApprovalSignature) -> None:
+    def verify(
+        self, payload: Mapping[str, object], signature: ApprovalSignature, *, domain: bytes = DOMAIN
+    ) -> None:
         """Raise SigningError unless `signature` is a valid approval-key signature over `payload`."""
         if signature.by != SIGNER or signature.key_id != self.key_id:
             raise SigningError("approval was signed by an unknown key")
@@ -81,6 +91,6 @@ class ApprovalVerifier:
             raise SigningError("unsupported signature algorithm")
         try:
             raw = unb64url(signature.sig.removeprefix("ed25519:"))
-            self._public.verify(raw, DOMAIN + canonical_bytes(dict(payload)))
+            self._public.verify(raw, domain + canonical_bytes(dict(payload)))
         except (InvalidSignature, ValueError) as exc:
             raise SigningError("approval signature is invalid") from exc

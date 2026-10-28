@@ -45,11 +45,12 @@ type Approval struct {
 	Passkey   *webauthn.Assertion `json:"passkey"`
 }
 
-// Run is the `run` message body.
+// Run is the `run` message body. A scheduled run carries Schedule instead of a plan approval.
 type Run struct {
 	Template json.RawMessage `json:"template"`
 	PlanHash string          `json:"plan_hash"`
 	Approval Approval        `json:"approval"`
+	Schedule *ScheduleRun    `json:"schedule,omitempty"`
 }
 
 // Template is the hashed plan (backend Plan.template()).

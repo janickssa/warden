@@ -14,7 +14,7 @@ from warden.schedules.cron import Cron, CronError, describe
 PATH = Path(__file__).resolve().parents[3] / "policy-fixtures" / "cron_vectors.json"
 
 
-def utc(y: int, mo: int, d: int, h: int = 0, mi: int = 0, s: int = 0) -> datetime:
+def utc(y: int, mo: int, d: int, h: int = 0, mi: int = 0, *, s: int = 0) -> datetime:
     return datetime(y, mo, d, h, mi, s, tzinfo=UTC)
 
 
@@ -80,7 +80,7 @@ def test_copenhagen_wall_time_and_dst() -> None:
     assert first == utc(2026, 10, 25, 0, 30)
     assert not c.is_slot(utc(2026, 10, 25, 1, 30))
     assert c.next_after(first) == utc(2026, 10, 26, 1, 30)
-    assert not c.is_slot(utc(2026, 10, 26, 1, 30, 1))  # whole minutes only
+    assert not c.is_slot(utc(2026, 10, 26, 1, 30, s=1))  # whole minutes only
 
 
 def test_latest_at_or_before() -> None:

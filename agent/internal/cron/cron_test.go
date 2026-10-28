@@ -65,7 +65,7 @@ func TestSharedVectors(t *testing.T) {
 
 func TestDST(t *testing.T) {
 	c, _ := Parse("30 2 * * *")
-	first := time.Date(2026, 10, 25, 0, 30, 0, 0, time.UTC) // 02:30 CEST
+	first := time.Date(2026, 10, 25, 0, 30, 0, 0, time.UTC)  // 02:30 CEST
 	second := time.Date(2026, 10, 25, 1, 30, 0, 0, time.UTC) // 02:30 CET, the repeat
 	if !c.IsSlot(first) || c.IsSlot(second) {
 		t.Fatal("the repeated autumn hour must fire once")
