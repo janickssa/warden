@@ -62,3 +62,18 @@ export function offlineSign(bundle: string, version: number): string {
   execFileSync(s.sign, ["sign", file, "--key", s.offlineKey, "--passphrase-file", s.passphrase, "--yes"], { encoding: "utf8" });
   return join(s.root, `bundle-v${version}.sig.json`);
 }
+
+/** Record an approved plan's run as succeeded, as the agent's report would (the stack has no agent). */
+export function succeed(planId: string): void {
+  const s = stack();
+  const code = [
+    "import sys",
+    "from pathlib import Path",
+    "from warden.cli import Home",
+    "from warden.plans.runs import StepOutcome",
+    "svc = Home(Path(sys.argv[1]), Path(sys.argv[2])).service()",
+    "p = svc.start_run(sys.argv[3])",
+    "svc.finish_run(p.id, [StepOutcome(n=st.n, exit_code=0, duration_s=1.0) for st in p.steps])",
+  ].join("\n");
+  execFileSync(s.python, ["-c", code, s.home, s.cfg, planId], { env: { ...process.env, PYTHONPATH: join(s.backend, "src") }, encoding: "utf8" });
+}

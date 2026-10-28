@@ -1433,6 +1433,10 @@ export interface components {
             revisions: string[];
             /** Risk */
             risk: ("low" | "medium" | "high") | null;
+            /** Schedule Id */
+            schedule_id?: string | null;
+            /** Slot */
+            slot?: string | null;
             /** Started At */
             started_at?: string | null;
             /** Status */
@@ -1491,6 +1495,10 @@ export interface components {
             revises: string | null;
             /** Risk */
             risk: ("low" | "medium" | "high") | null;
+            /** Schedule Id */
+            schedule_id?: string | null;
+            /** Slot */
+            slot?: string | null;
             /** Status */
             status: string;
             /** Steps */
@@ -1859,6 +1867,11 @@ export interface components {
             policy_version: number;
             /** Running */
             running: string[];
+            /**
+             * Schedules Awaiting
+             * @default 0
+             */
+            schedules_awaiting: number;
         };
         /** StepView */
         StepView: {

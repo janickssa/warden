@@ -108,6 +108,8 @@ class PlanSummary(BaseModel):
     changed_steps: int | None = None
     decided_at: str | None = None
     agent: AgentState | None = None
+    schedule_id: str | None = None  # a scheduled run (M7)
+    slot: str | None = None
 
 
 class PlanList(BaseModel):
@@ -485,3 +487,4 @@ class StatusView(BaseModel):
     pending_publish: int | None
     language: str
     passkeys: int
+    schedules_awaiting: int = 0

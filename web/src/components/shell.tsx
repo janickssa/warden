@@ -172,6 +172,11 @@ function Sidebar({ section, onKeys }: { section: string; onKeys: () => void }) {
                 {status.data.awaiting}
               </span>
             )}
+            {key === "schedules" && !!status.data?.schedules_awaiting && (
+              <span className="tag tag-accent" style={{ padding: "1px 7px" }} data-testid="schedules-count" title={t("Schedules waiting for your approval")}>
+                {status.data.schedules_awaiting}
+              </span>
+            )}
           </Link>
         ))}
       </nav>

@@ -27,3 +27,5 @@ export type SessionView = S["SessionView"];
 export type OutputView = S["OutputView"];
 export type ApproveOptions = S["ApproveOptions"];
 export type Me = S["Me"];
+export type ScheduleView = S["ScheduleView"];
+export type ScheduleDetail = S["ScheduleDetail"];

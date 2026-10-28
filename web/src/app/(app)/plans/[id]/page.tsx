@@ -1,7 +1,7 @@
 "use client";
 // Plan detail (spec 5): what Claude asked for, what the reviewers think, every command in full, then the
 // decision. Approve unlocks only after scrolling to the last step, and needs the passkey when Warden says so.
-import { ArrowLeft, Check, Fingerprint, GitDiff, ListNumbers, PaperPlaneTilt, PencilSimple, SealCheck, Stethoscope, StopCircle, Timer, Warning, X } from "@phosphor-icons/react";
+import { ArrowLeft, Check, ClockClockwise, Fingerprint, GitDiff, ListNumbers, PaperPlaneTilt, PencilSimple, SealCheck, Stethoscope, StopCircle, Timer, Warning, X } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -9,10 +9,11 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { anyDialogOpen, Dialog } from "@/components/dialog";
 import { isCancel, usePasskey } from "@/components/passkey";
 import { ApprovalSummary, DiagnosisCard, DiffView, Steps, Verdicts } from "@/components/plan-parts";
+import { SaveScheduleDialog } from "@/components/schedule-dialog";
 import { BACK, KillDialog, planOrigin, useMain } from "@/components/shell";
 import { Badge, Countdown, ErrorBox, planBadgeKey, RelTime, Seg, Skeleton, useNow } from "@/components/ui";
 import { api, ApiError, post } from "@/lib/api";
-import { fmtDur, fmtTime } from "@/lib/format";
+import { fmtDur, fmtExact, fmtTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { useLive } from "@/lib/live";
 import { agentWarn, shortHash } from "@/lib/plan";
@@ -86,7 +87,7 @@ function Plan({ p }: { p: PlanDetail }) {
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [reviewedHash, setReviewedHash] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<null | "reject" | "diagnose" | "kill">(null);
+  const [dialog, setDialog] = useState<null | "reject" | "diagnose" | "kill" | "schedule">(null);
   const [busy, setBusy] = useState(false);
   const mine = useRef(false);
   const lastStatus = useRef(p.status);
@@ -242,6 +243,15 @@ function Plan({ p }: { p: PlanDetail }) {
             </span>
           )}
         </div>
+        {p.schedule_id && (
+          <div style={{ fontSize: 13, color: "var(--color-accent-300)", display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }} data-testid="scheduled-run">
+            <ClockClockwise size={14} /> {t("Scheduled run of")}{" "}
+            <Link className="mono" href={`/schedules/${encodeURIComponent(p.schedule_id)}`}>
+              {p.schedule_id}
+            </Link>
+            {p.slot && ` · ${t("slot {time}", { time: fmtExact(p.slot) })}`}
+          </div>
+        )}
         {p.revises && (
           <div style={{ fontSize: 13, color: "var(--color-accent-300)", display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
             <GitDiff size={14} /> {t("Revision of")} <span className="mono">#{p.revises}</span>
@@ -360,11 +370,12 @@ function Plan({ p }: { p: PlanDetail }) {
       )}
       {dialog === "diagnose" && <DiagnoseDialog p={p} onClose={() => setDialog(null)} />}
       {dialog === "kill" && <KillDialog planId={p.id} onClose={() => setDialog(null)} />}
+      {dialog === "schedule" && <SaveScheduleDialog p={p} onClose={() => setDialog(null)} />}
     </section>
   );
 }
 
-function Info({ p, expired, progress, offline, open }: { p: PlanDetail; expired: boolean; progress: string | null; offline: boolean; open: (d: "diagnose" | "kill") => void }) {
+function Info({ p, expired, progress, offline, open }: { p: PlanDetail; expired: boolean; progress: string | null; offline: boolean; open: (d: "diagnose" | "kill" | "schedule") => void }) {
   const t = useT();
   const router = useRouter();
   let text = "";
@@ -421,6 +432,11 @@ function Info({ p, expired, progress, offline, open }: { p: PlanDetail; expired:
       {revision && !p.diagnoses.length && (
         <button className="btn btn-secondary" onClick={() => router.push(`/plans/${encodeURIComponent(revision)}?from=plans`)}>
           <GitDiff size={16} /> {t("Open revision {id}", { id: revision })}
+        </button>
+      )}
+      {p.status === "succeeded" && !p.schedule_id && (
+        <button className="btn btn-secondary" disabled={offline} onClick={() => open("schedule")}>
+          <ClockClockwise size={16} /> {t("Save as schedule")}
         </button>
       )}
       {p.status === "running" && (

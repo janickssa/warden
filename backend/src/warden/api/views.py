@@ -156,6 +156,8 @@ def summary(p: Plan, facts: Facts, *, with_agent: bool = False) -> sc.PlanSummar
         changed_steps=changed,
         decided_at=iso(p.approval.at) if p.approval else None,
         agent=facts.agent_state(p.target) if with_agent else None,
+        schedule_id=p.schedule_id,
+        slot=iso(p.slot) if p.slot else None,
     )
 
 

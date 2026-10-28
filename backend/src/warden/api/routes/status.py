@@ -49,4 +49,7 @@ def status(c: Ctx, me: SessionDep) -> sc.StatusView:
         pending_publish=pending.version if pending else None,
         language=facts.cfg.settings.ui.language,
         passkeys=len(active(c.engine)),
+        schedules_awaiting=sum(s.status == "awaiting_approval" for s in c.schedules.all())
+        if c.schedules
+        else 0,
     )

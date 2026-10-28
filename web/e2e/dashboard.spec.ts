@@ -2,7 +2,7 @@
 // a passkey, sign in, approve with it, publish a tightening), then states, keyboard, the prototype bug
 // fixes, phone layout and Danish. Passkeys come from a virtual authenticator; nothing leaves localhost.
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { authenticator, localOnly, offlineSign, propose, registrationLink, warden } from "./warden";
+import { authenticator, localOnly, offlineSign, propose, registrationLink, succeed, warden } from "./warden";
 
 test.describe.configure({ mode: "serial" });
 
@@ -196,6 +196,45 @@ test("audit log verifies the chain and records what happened", async () => {
   await expect(page.locator("[data-audit]").first()).toBeVisible();
   await page.locator("label.seg-opt", { hasText: "Settings & access" }).click();
   await expect(page.locator("[data-audit]", { hasText: "setting_changed" }).first()).toBeVisible();
+});
+
+test("M7: save a succeeded plan as a schedule, approve it with the passkey, pause and resume", async () => {
+  await page.goto("/approvals");
+  const id = propose("Nightly checks on dev", ["git status", "npm test"]);
+  await page.locator(`[data-plan="${id}"]`).click();
+  await scrollToEnd();
+  await page.getByTestId("approve").click();
+  await usePasskey();
+  await expect(page.getByTestId("plan-info")).toContainText(/Approved \d\d:\d\d/, { timeout: 10_000 });
+  succeed(id);
+  await page.reload();
+  await expect(page.getByTestId("plan-info")).toContainText("✓ Succeeded");
+  await page.getByRole("button", { name: "Save as schedule" }).click();
+  const dialog = page.getByTestId("schedule-dialog");
+  await dialog.getByLabel("Name").fill("nightly-checks");
+  await dialog.getByRole("button", { name: "Save schedule" }).click();
+  await expect(page).toHaveURL(/\/schedules\/sch_/);
+  await expect(page.locator('[data-state="awaiting_approval"]').first()).toBeVisible();
+  await expect(page.getByTestId("schedules-count")).toHaveText("1");
+  // A standing approval: the full commands first, then the passkey.
+  const approve = page.getByTestId("approve-schedule");
+  await scrollToEnd();
+  await expect(approve).toBeEnabled();
+  await approve.click();
+  await expect(page.getByTestId("passkey-dialog")).toContainText("nightly-checks");
+  await usePasskey();
+  await expect(page.locator('[data-state="active"]').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId("schedule-hint")).toContainText(/Runs every day at 03:00 · next run (Today|Tomorrow) 03:00/);
+  await expect(page.getByTestId("schedules-count")).toHaveCount(0);
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(page.locator('[data-state="paused"]').first()).toBeVisible();
+  await page.getByRole("button", { name: "Resume" }).click();
+  await expect(page.locator('[data-state="active"]').first()).toBeVisible();
+  await page.locator('[data-nav="schedules"]').click();
+  const row = page.locator('[data-schedule="nightly-checks"]');
+  await expect(row).toContainText("Every day at 03:00");
+  await expect(row).toContainText("Active");
+  expect(warden("schedule", "list")).toMatch(/nightly-checks\s+active/);
 });
 
 test("no request ever left the dashboard's origin", () => {
