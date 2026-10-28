@@ -137,6 +137,19 @@ These are all stricter than or equal to the spec. Where they change README text,
 | M6-12 | Dependencies | `next` 16.4.0 had three published advisories (two critical); pinned to 16.4.2 instead. |
 | M6-13 | Chat approval | Still no elicitation (M4-03 stands). While a plan waits, `wait_for_approval` returns `approve_at`, the plan's dashboard link from `server.public_url`, and `get_plan`'s `next` names it. Approving needs the dashboard, app or CLI, so invariant 3 holds without trusting the MCP client's UI. |
 
+## B8. Decisions made while building M7
+
+| ID | Topic | Decision |
+|---|---|---|
+| M7-01 | Cron | Warden's own five-field evaluator, in Python and Go, with shared vectors, instead of APScheduler (README §13). Agents check each slot, so both sides must agree exactly. Evaluated in Europe/Copenhagen: a wall time that doesn't exist (spring) never fires, and one that happens twice (autumn) fires once. No names, `@daily`, `L`, `W` or `#`. |
+| M7-02 | Schedule grant | A plan approval binds one plan ID for minutes, so a schedule has its own grant: the template hash, schedule, target, cron, time zone and window. It's signed by the approval key under its own domain (`warden-schedule-v1`, so it can't be swapped with a plan approval) and **always** by the human's passkey, because it's a standing approval. Windows last at most 180 days; agents refuse longer ones. |
+| M7-03 | What agents check per run | The hash, signatures and passkey (the passkey must be an approver in the agent's bundle), the target, the window, that the slot is a slot of the cron, and that it's now (1 min early to 15 min late). The claim `schedule@slot` in `executed.log` makes each slot run once. A compromised Warden can't run the steps at other times, more often, after expiry, or changed. |
+| M7-04 | Creating a schedule | Only a human, only from a plan that succeeded (not from a scheduled run), in the dashboard. There's no MCP tool (D-14), and the CLI can list, show, pause, resume and delete but not create or approve (that needs a passkey). The gatekeepers aren't asked again: the steps are exactly a reviewed, approved and succeeded plan's. Policy is checked at creation, at approval, at every fire and after every publish. |
+| M7-05 | Runs | Each fire is a real plan (`requested_by: scheduler`) created approved, with the grant as its approval, and dispatched as usual: output, kill switch and audit all work. If it can't start in its slot (lockdown, agent offline or behind), it's recorded as missed, not held: a late run would be refused by the agent anyway. Missed slots aren't caught up. |
+| M7-06 | Failure and states | `on_failure: notify_and_stop`: a failed run stops the schedule and notifies, and Claude can propose a fix through the normal flow. Stopped, expired, invalidated and deleted are final; a working plan is saved as a new schedule. Resume needs no new approval: a template can't change, so README's "resuming a changed template" can't happen. Resume skips what was due while paused. |
+| M7-07 | Notifications | An outbox table, written in the same transaction as the event. The iPhone app delivers it in M8, honouring `settings.notifications`. The dashboard shows the same events in the feed. |
+| M7-08 | Approver list first | A schedule approval only works on agents that already trust that passkey. Adding a passkey loosens (M6-03), so its approver-list bundle needs the offline signature; until then the agent refuses the schedule's runs (`bad_passkey`). |
+
 ## C. README ↔ prototype disagreements
 
 | ID | Where | README says | Prototype does | Resolution |
@@ -160,6 +173,8 @@ These are all stricter than or equal to the spec. Where they change README text,
 | X-17 | Plan decided elsewhere | Toast "Approved on iPhone 14:32", buttons disabled, refresh | Not implemented | README: the page updates live and toasts who decided. |
 | X-18 | Feed client filter | Live feed filters by client | Type and target only, targets hard-coded | README: a client filter, targets from the agent list. |
 | X-19 | Approve label with groups | Passkey per §10.0 and group `passkey: true` | The label ignores groups | Label comes from Warden's own passkey reasons, groups included. |
+| X-20 | Schedule state on the web | Pause/resume "only in the iPhone spec" (prototype has no web actions) | The web table has no actions | README behaviour on the web too: a schedule page with Approve & sign, Pause, Resume and Delete. |
+| X-21 | Scheduler | APScheduler (README §13) | — | Own evaluator shared with the agents (M7-01). |
 
 ## D. Things I noticed but am not changing (FYI)
 

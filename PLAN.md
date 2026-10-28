@@ -39,7 +39,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 | M4 ☑ | MCP | MCPServer tools (§6 + `post_diagnosis`), Streamable HTTP + stdio bridge, MCP client tokens (elicitation moved to M6, M4-03) | Works end-to-end from Claude Code over WireGuard | `test_cli_daemon.py::test_m4_dry_run` (real HTTP, real agent) + manual Claude Code session in `docs/m4-demo.md` |
 | M5 ◐ | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
 | M6 ☑ | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | `web/e2e/dashboard.spec.ts` (real `warden serve`, virtual passkey) + manual check over VPN in `docs/m6-demo.md` |
-| M7 ◐ | Schedules | Signed schedule grants checked by agents, cron, expiry, pause/resume, failure notify | Nightly job runs and reports | Integration test with the real agent + time-travel scheduler tests + one real nightly run |
+| M7 ☑ | Schedules | Signed schedule grants checked by agents, cron, expiry, pause/resume, failure notify | Nightly job runs and reports | `tests/integration/test_schedules.py` (real agent) + time-travel scheduler tests + one real nightly run in `docs/m7-demo.md` |
 | M8 | iPhone app | SwiftUI app, `WardenCore` package, APNs, Face ID, lockdown, approve with edits | Approve from the lock screen | `swift test` on Linux (WardenCore + view models) + TestFlight manual check |
 | M9 | Public MCP | Public NPM host for `/mcp` only, OAuth | Works from the Claude app without VPN | **Ask before starting** (OAuth design choice, §18) |
 | M10 | Agent updates | Offline-signed binaries, canary rollout, auto-rollback | New agent version rolls out with no manual steps | Integration test: canary + rollback on missing heartbeat |
@@ -858,6 +858,29 @@ steps.
 3. `schedules: service, scheduler, API, CLI`
 4. `web: schedules`
 5. `docs: M7`
+
+### M7 result ☑ (28.10.2026)
+
+The Done-when "nightly job runs and reports" is proven by `backend/tests/integration/test_schedules.py` with
+the real Go agent:
+- a succeeded plan becomes a schedule and is approved with a passkey over its grant;
+- the scheduler fires the slot, and the agent verifies the grant, the cron slot and the time itself;
+- the run succeeds and is reported (last result, audit, an outbox notification for M8).
+
+The same file shows the agent refusing what a compromised Warden would try: the same slot again
+(`replayed_plan`), or a slot that isn't now (`bad_slot`). A failing run stops the schedule and notifies.
+
+The rest of the evidence:
+- Unit tests time-travel over the 15 min window, expiry, pause and resume, missed runs, policy invalidation
+  and the dispatch checks.
+- Cron and grant vectors are shared with Go: DST days and 15 mutations of a signed run.
+- The API tests cover the passkey binding.
+- The Playwright suite saves, approves, pauses and resumes a schedule in the browser.
+
+The real 03:00 run on your setup is the manual check in `docs/m7-demo.md`. Decisions: DECISIONS.md section
+B8 (M7-01 … M7-08), X-20 and X-21.
+
+Differences from the plan above: none.
 
 ## M8 iPhone app — outline
 **Required (confirmed 24.10.2026).** Build it with the new iOS skill the owner provides at M8 (load it before

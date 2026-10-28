@@ -535,7 +535,11 @@ A schedule is **a plan template the human approved once, with explicit scope**:
 
 - Only the exact approved template can run. Any change gives a new hash and needs new approval.
 - On failure: stop and notify. Claude may propose a fix through the normal flow.
-- Schedules expire (default 90 days).
+- Schedules expire (default 90 days, at most 180).
+- **Created by a human only**, from a plan that succeeded ("Save as schedule" in the dashboard). Claude has no tool for schedules.
+- **Approved with your passkey, always**, because it's a standing approval. The approval is a signed *grant* over the template hash, target, cron, time zone and window (`warden-schedule-v1`).
+- **Agents check every run themselves** (invariant 10): the grant's signatures, the target, that the slot is one of the cron's in Europe/Copenhagen and is now (1 min early to 15 min late), the window, and that the slot hasn't run before. A slot that can't start on time (lockdown, agent offline) is missed, never run late.
+- Pausing needs no approval; resuming needs none either, because the approved template can't change. Policy is re-checked at every run and after every publish; a schedule the policy now denies is invalidated and you're notified.
 
 ---
 
@@ -563,7 +567,7 @@ A schedule is **a plan template the human approved once, with explicit scope**:
 | Agent | Go: single static binary, mTLS WebSocket, ed25519 signatures |
 | Offline signing | `warden-sign` (Go CLI), optional YubiKey via PIV |
 | Gatekeepers | Ollama, OpenAI, Anthropic adapters via `httpx` |
-| Scheduling | APScheduler |
+| Scheduling | Warden's own cron evaluator, shared with the agents (DECISIONS M7-01) |
 | Frontend | Next.js + TypeScript + Tailwind + TanStack Query |
 | Tooling | `uv`, `ruff`, `mypy --strict`, `pytest`; `pnpm`, ESLint, Vitest, Playwright |
 
