@@ -17,3 +17,4 @@ engine's own tests.
 - `canonical_vectors.json`: canonical JSON + SHA-256 vectors for plan hashing.
 - `cron_vectors.json`: schedule cron slots in Europe/Copenhagen (incl. DST days) and refused expressions (M7).
 - `schedule_vectors.json`: a schedule run signed in Python (approval key + passkey) that the agent must accept, and refuse when mutated (M7).
+- `ios_webauthn_vectors.json`: the iPhone's Face ID device key (M8): registration and assertion bytes WardenCore must rebuild exactly, accepted by py_webauthn and the Go agent.

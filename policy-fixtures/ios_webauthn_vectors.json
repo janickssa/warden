@@ -1,0 +1,35 @@
+{
+ "approver": {
+  "alg": -7,
+  "credential_id": "URg6YIlDUkaZMY7GLOewqg",
+  "name": "iPhone",
+  "public": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErrKVzFZqlebEwKN0MRTGrDjctglP9R1mtL88GxmeAVik9yeDyPFazL1iDqvQgr5fhnzuMVNZvZDEeO98M2BpoA"
+ },
+ "assertion": {
+  "authenticator_data_hex": "92b794dc1eab10869a9a2befdb0e9eda42ce1ca871965aa5f698b06c4f0d94ce0500000000",
+  "challenge": "VhE8qPZnzNNLGwQ5vkpSfUWo9-ycnu7Wn4TikkK9NEQ",
+  "client_data_json": "{\"type\":\"webauthn.get\",\"challenge\":\"VhE8qPZnzNNLGwQ5vkpSfUWo9-ycnu7Wn4TikkK9NEQ\",\"origin\":\"https://warden.example.dk\",\"crossOrigin\":false}",
+  "message_sha256_hex": "56113ca8f667ccd34b1b0439be4a527d45a8f7ec9c9eeed69f84e29242bd3444",
+  "payload": {
+   "approved_at": "2026-10-20T12:00:00+00:00",
+   "by": "dashboard:iPhone",
+   "expires_at": "2026-10-20T12:30:00+00:00",
+   "plan_hash": "sha256:abababababababababababababababababababababababababababababababab",
+   "plan_id": "pln_01JB7Q3K0000000000000000AA",
+   "target": "dev",
+   "v": 1
+  },
+  "signature": "MEQCIF7F6WATiYfdWiBVZpJBeEiVvB4FaTA8bSNBawozup5gAiBWr8Cj_XkB2N1n8CFw_xD8jxpRPQV9_3aQ4gI2ccJs-A"
+ },
+ "cose_hex": "a5010203262001215820aeb295cc566a95e6c4c0a3743114c6ac38dcb6094ff51d66b4bf3c1b199e0158225820a4f72783c8f15accbd620eabd082be5f867cee315359bd90c478ef7c336069a0",
+ "credential_id": "URg6YIlDUkaZMY7GLOewqg",
+ "origin": "https://warden.example.dk",
+ "private_key_hex": "4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318",
+ "public_x963_hex": "04aeb295cc566a95e6c4c0a3743114c6ac38dcb6094ff51d66b4bf3c1b199e0158a4f72783c8f15accbd620eabd082be5f867cee315359bd90c478ef7c336069a0",
+ "registration": {
+  "attestation_object_hex": "a363666d74646e6f6e656761747453746d74a0686175746844617461589492b794dc1eab10869a9a2befdb0e9eda42ce1ca871965aa5f698b06c4f0d94ce450000000000000000000000000000000000000000001051183a608943524699318ec62ce7b0aaa5010203262001215820aeb295cc566a95e6c4c0a3743114c6ac38dcb6094ff51d66b4bf3c1b199e0158225820a4f72783c8f15accbd620eabd082be5f867cee315359bd90c478ef7c336069a0",
+  "challenge": "d2FyZGVuLXJlZ2lzdHJhdGlvbi1jaGFsbGVuZ2UtMDE",
+  "client_data_json": "{\"type\":\"webauthn.create\",\"challenge\":\"d2FyZGVuLXJlZ2lzdHJhdGlvbi1jaGFsbGVuZ2UtMDE\",\"origin\":\"https://warden.example.dk\",\"crossOrigin\":false}"
+ },
+ "rp_id": "warden.example.dk"
+}

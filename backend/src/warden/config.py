@@ -121,6 +121,19 @@ class NotificationSettings(BaseModel):
     scheduled_done: bool = True
 
 
+class PushSettings(BaseModel):
+    """APNs for the iPhone app (README 10.3, M8). Off until a key is configured. The `.p8` key lives in
+    `<config dir>/secrets/<key_secret>` (mode 0600), never in this file."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    enabled: bool = False
+    key_id: Annotated[str, Field(pattern=r"^[A-Z0-9]{10}$")] | None = None
+    team_id: Annotated[str, Field(pattern=r"^[A-Z0-9]{10}$")] | None = None
+    topic: str = "dk.schwabejss.warden"  # the app's bundle ID
+    key_secret: Annotated[str, Field(pattern=r"^[A-Za-z0-9._-]{1,64}$")] = "apns.p8"  # noqa: S105 - a file name, not a secret
+    host: Literal["api.push.apple.com", "api.sandbox.push.apple.com"] = "api.push.apple.com"
+
+
 class Settings(BaseModel):
     """Human-only settings. Claude can neither read nor change these (README 17.3)."""
 
@@ -133,6 +146,7 @@ class Settings(BaseModel):
     schedules: ScheduleSettings = ScheduleSettings()
     ui: UiSettings = UiSettings()
     notifications: NotificationSettings = NotificationSettings()
+    push: PushSettings = PushSettings()
 
 
 def parse_settings(text: str, *, source: str = "settings.yaml") -> Settings:

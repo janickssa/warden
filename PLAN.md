@@ -40,7 +40,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done (with the test or 
 | M5 ◐ | Gatekeepers | Panel (strictest/unanimous), Ollama, OpenAI, Anthropic and OpenAI-compatible adapters, prompt, scrubbing, injection fixtures | Injection tests escalate or deny on every reviewer | Recorded-response tests for every adapter in CI + live opt-in run against real models |
 | M6 ☑ | Dashboard | `design/tokens.json`, Next.js app, passkey auth, e2e approval signing, every §17.3 page, the 4 prototype bug fixes | Approve and publish rules from the browser | `web/e2e/dashboard.spec.ts` (real `warden serve`, virtual passkey) + manual check over VPN in `docs/m6-demo.md` |
 | M7 ☑ | Schedules | Signed schedule grants checked by agents, cron, expiry, pause/resume, failure notify | Nightly job runs and reports | `tests/integration/test_schedules.py` (real agent) + time-travel scheduler tests + one real nightly run in `docs/m7-demo.md` |
-| M8 | iPhone app | SwiftUI app, `WardenCore` package, APNs, Face ID, lockdown, approve with edits | Approve from the lock screen | `swift test` on Linux (WardenCore + view models) + TestFlight manual check |
+| M8 ◐ | iPhone app | SwiftUI app, `WardenCore` package, APNs, Face ID, lockdown, approve with edits | Approve from the lock screen | `swift test` on Linux (WardenCore + view models) + TestFlight manual check |
 | M9 | Public MCP | Public NPM host for `/mcp` only, OAuth | Works from the Claude app without VPN | **Ask before starting** (OAuth design choice, §18) |
 | M10 | Agent updates | Offline-signed binaries, canary rollout, auto-rollback | New agent version rolls out with no manual steps | Integration test: canary + rollback on missing heartbeat |
 
@@ -882,14 +882,87 @@ B8 (M7-01 … M7-08), X-20 and X-21.
 
 Differences from the plan above: none.
 
-## M8 iPhone app — outline
-**Required (confirmed 24.10.2026).** Build it with the new iOS skill the owner provides at M8 (load it before
-writing any Swift; it takes precedence over this outline where they differ). Until then, the outline is: the
-`iphone-app` skill and its Linux pipeline: SwiftPM + `xtool.yml`, Forgejo `ios` runner, `ship.sh`.
-`WardenCore` (Foundation-only: models, decoding, formatters, verdict/state logic incl. gatekeeper-
-unavailable and the final-verdict calculation) with `swift test` on Linux. Face ID-gated passkey
-approval, actionable APNs notifications, press-and-hold 2 s kill switch and lockdown. Bug fix (3)
-covered by a WardenCore unit test.
+## M8 iPhone app — detailed plan
+
+Built with the owner's `iphone-app` and `forgejo-ios` skills (they take precedence over this plan):
+- SwiftPM and `xtool.yml` in `ios/`, with no Xcode files and literal plist values.
+- A Foundation-only `WardenCore` package, tested with `swift test` on Linux.
+- Built, signed and sent to TestFlight by the Forgejo `ios` runner through `ios-ship`.
+- Bundle ID `dk.schwabejss.warden`; the notification extension is `dk.schwabejss.warden.notify`.
+
+### Decisions (asked 11.11.2026)
+- **iPhone approvals are signed by a Face ID device key** (README 10.0 "Face ID (iPhone)").
+  - The key is a non-exportable P-256 key in the Secure Enclave, usable only after Face ID
+    (`.biometryCurrentSet`).
+  - It is registered with Warden as an approver, exactly like a passkey: a WebAuthn "none" attestation the
+    app builds itself.
+  - It signs the same WebAuthn-format assertions agents already verify.
+  - Nothing is exposed to the internet, unlike iCloud passkeys, which need a public
+    `apple-app-site-association` file. The dashboard stays VPN-only.
+- **Approve from the lock screen:**
+  - A notification content extension shows every command. Approve asks for Face ID and signs in the
+    extension.
+  - High-risk plans are "open in app" only (README 17.4).
+  - That Face ID works inside the extension is to be proven on TestFlight. The fallback is the Approve
+    action opening the app on that plan.
+- **Forgejo host/user and the Apple Team ID are MISSING** until Forgejo is up. They are placeholders marked
+  `MISSING` in the workflow, the entitlements and `ios/README.md`.
+
+### Backend
+- **Pairing:** `POST /api/passkeys/pairing {name, confirm}`.
+  - Signed in and confirmed with an existing passkey, it returns the same one-time link as
+    `warden passkey add` (15 min, once).
+  - The app accepts the pasted link (Universal Clipboard from the Mac) and registers its device key through
+    the existing `/api/passkeys/register` endpoints.
+- **Devices:** `POST /api/devices {token, name}` stores an APNs device token for the signed-in passkey;
+  `GET /api/devices`; `POST /api/devices/{id}/remove`. Removing the passkey removes its devices.
+- **Push:**
+  - `notify.py` gains `approval_needed` (awaiting_approval; high risk is open-only), `plan_failed` and
+    `agent_refused`, next to M7's `scheduled_done` and `schedule_stopped`.
+  - `push.py` delivers the outbox over APNs HTTP/2 (`httpx2` + `h2`, ES256 JWT from a `.p8` in the
+    secrets directory).
+  - It honours `settings.notifications`, retries, drops dead tokens (410), and is off until
+    `settings.push` is set.
+  - Payloads carry the title, body, category and plan ID only. The commands are fetched over WireGuard by
+    the extension, so they never go through Apple.
+- Settings → "Devices" on the web lists paired iPhones (remove), and "Pair iPhone" creates the link.
+
+### WardenCore (Foundation only + swift-crypto for SHA-256/P-256 on Linux)
+- Codable models mirroring the API (plans, steps, verdicts, agents, schedules, feed, status).
+- `APIClient` over an injectable transport, with cookie session, `Origin` and `X-Warden: 1`, errors →
+  offline/expired/refused.
+- `WebAuthn`: CBOR encoder, authenticator data (rpIdHash, UP|UV, counter, attested credential with COSE
+  EC2), `clientDataJSON`, and attestation/assertion objects in the shape py_webauthn reads. They are tested
+  **byte for byte** against `policy-fixtures/ios_webauthn_vectors.json`, which Python generates and which
+  py_webauthn and the Go agent verify.
+- Plan logic:
+  - the final verdict including gatekeeper-unavailable (bug 3: a unit test);
+  - passkey reasons, agent warnings, scroll gate;
+  - formatting (24 h Copenhagen, durations, MB/GB), cron in plain language, ANSI spans.
+
+### App (`ios/Sources/Warden`)
+- **Tabs:** Approvals (badge), Activity, Schedules, Settings. Dark only, Nocturne colours.
+- **Pairing:** server URL + link, then Face ID registers and signs in.
+- **Plan detail:** header → verdicts → steps (full SF Mono) → diff. Approve (Face ID, scroll gate for high
+  risk), Reject, Approve with edits, kill switch (press and hold 2 s with haptics).
+- **Activity:** feed, running plans and live output.
+- **Schedules:** pause, resume, approve with Face ID.
+- **Settings:** lockdown (press and hold), agents, server, notifications, test connection.
+- Push registration. The extension `WardenNotify` has categories `APPROVAL` (Approve/Reject) and `OPEN`.
+
+### Tests
+- **pytest:** pairing, devices, push payloads and preferences, the APNs sender against a fake HTTP/2
+  server, outbox kinds, vectors.
+- **swift test (Linux):** the WardenCore models decode the real OpenAPI examples, WebAuthn is byte-equal to
+  the vectors, plan logic and formatting.
+- **App target:** built by CI (`ship.sh`), and the Done-when ("approve from the lock screen") by hand on
+  TestFlight (`docs/m8-demo.md`).
+
+### Commits
+1. `push: pairing, devices, APNs delivery, notification events`
+2. `ios: WardenCore with Linux tests`
+3. `ios: app and notification extension`
+4. `ci/docs: Forgejo workflow (host/team MISSING), Apple checklist, M8 docs`
 
 ## M9 Public MCP — **stop and ask before starting** (OAuth inside Warden vs. an IdP such as Authentik).
 

@@ -40,6 +40,7 @@ from warden.mcp.server import WardenMcp, build_server
 from warden.passkeys import Passkeys, RelyingParty
 from warden.plans.service import Config, PlanService
 from warden.policy_dist import bundle as bundles
+from warden.push import Pusher
 from warden.schedules.scheduler import Scheduler
 from warden.schedules.service import ScheduleService
 from warden.signing import ApprovalKey
@@ -47,6 +48,7 @@ from warden.signing import ApprovalKey
 log = logging.getLogger("warden.daemon")
 SOCKET = "admin.sock"
 EXPIRE_EVERY_S = 30
+PUSH_EVERY_S = 5
 
 
 def _peer_uid(writer: asyncio.StreamWriter) -> int | None:
@@ -88,6 +90,7 @@ class Daemon:
             default_days=lambda: self.config.settings.schedules.default_expiry_days,
         )
         self.scheduler = Scheduler(self.schedules, self.dispatcher)
+        self.pusher = Pusher(self.engine, lambda: self.config.settings, self._config_dir / "secrets")
         self.bus = EventBus(self.engine)
         self.api_ctx = ApiContext(
             engine=self.engine,
@@ -136,6 +139,14 @@ class Daemon:
             "killed": killed,
             "invalidated": invalidated,
         }
+
+    async def _push_loop(self) -> None:
+        while True:
+            await asyncio.sleep(PUSH_EVERY_S)
+            try:
+                await self.pusher.deliver_once()
+            except Exception:
+                log.exception("push pass failed")
 
     async def _expire_loop(self) -> None:
         while True:
@@ -246,12 +257,14 @@ class Daemon:
         )
         expiry = asyncio.create_task(self._expire_loop())
         scheduling = asyncio.create_task(self.scheduler.run())
+        pushing = asyncio.create_task(self._push_loop())
         try:
             async with server:
                 await server.serve_forever()
         finally:
             expiry.cancel()
             scheduling.cancel()
+            pushing.cancel()
             mcp_http.should_exit = True
             await self.bus.stop()
             with contextlib.suppress(Exception):

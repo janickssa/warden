@@ -168,8 +168,10 @@ def run_tick(sched: Scheduler) -> list[str]:
 
 
 def notifications(engine: Engine) -> list[notify.NotificationRow]:
+    """The schedules' own notifications (proposals also queue "approval needed" since M8)."""
     with Session(engine) as s:
-        return list(s.exec(select(notify.NotificationRow).order_by(col(notify.NotificationRow.id))))
+        rows = s.exec(select(notify.NotificationRow).order_by(col(notify.NotificationRow.id)))
+        return [r for r in rows if r.kind in ("scheduled_done", "schedule_stopped")]
 
 
 def test_a_nightly_run_runs_and_reports(world: World, svc: ScheduleService) -> None:

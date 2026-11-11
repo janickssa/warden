@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from warden.actors import HumanActor
 from warden.api.auth import COOKIE, COOKIE_MAX_AGE, Ctx, Guard, Human, SessionDep, session
 from warden.api.routes.settings import publish_trust_now
-from warden.passkeys import PasskeyRefused, Purpose, actor_id
+from warden.passkeys import ENROLL_TTL, PasskeyRefused, Purpose, actor_id
 
 router = APIRouter(tags=["auth"])
 
@@ -106,6 +106,29 @@ async def register(body: CredentialIn, c: Ctx) -> dict[str, str]:
     if r is not None:
         out["approvers"] = f"{r.outcome} v{r.version}"
     return out
+
+
+class PairingIn(_In):
+    name: str = Field(max_length=40)
+    confirm: CredentialIn
+
+
+class PairingOut(BaseModel):
+    link: str
+    expires_at: str
+
+
+@router.post("/passkeys/pairing")
+def pairing(body: PairingIn, c: Ctx, human: Human) -> PairingOut:
+    """Pair an iPhone (M8): the same one-time link as `warden passkey add`, after confirming with a passkey
+    you already have. Paste it into the app; its Face ID device key registers through /passkeys/register."""
+    c.passkeys.verify(
+        body.confirm.challenge_id, body.confirm.credential, "add_passkey", body.name, now=c.now()
+    )
+    token = c.passkeys.create_enrollment(body.name, actor=human, now=c.now())
+    url = c.config().settings.server.public_url.rstrip("/")
+    expires = c.now() + ENROLL_TTL
+    return PairingOut(link=f"{url}/register?token={token}", expires_at=expires.isoformat())
 
 
 @router.post("/confirm/options")

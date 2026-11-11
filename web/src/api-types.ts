@@ -234,6 +234,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Devices */
+        get: operations["list_devices_api_devices_get"];
+        put?: never;
+        /** Register */
+        post: operations["register_api_devices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/{device_id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remove */
+        post: operations["remove_api_devices__device_id__remove_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/e2e": {
         parameters: {
             query?: never;
@@ -357,6 +392,27 @@ export interface paths {
         get: operations["passkeys_api_passkeys_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/passkeys/pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pairing
+         * @description Pair an iPhone (M8): the same one-time link as `warden passkey add`, after confirming with a passkey
+         *     you already have. Paste it into the app; its Face ID device key registers through /passkeys/register.
+         */
+        post: operations["pairing_api_passkeys_pairing_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1101,6 +1157,29 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** DeviceIn */
+        DeviceIn: {
+            /**
+             * Name
+             * @default iPhone
+             */
+            name: string;
+            /** Token */
+            token: string;
+        };
+        /** DeviceView */
+        DeviceView: {
+            /** Created At */
+            created_at: string;
+            /** Id */
+            id: string;
+            /** Last Ok At */
+            last_ok_at: string | null;
+            /** Name */
+            name: string;
+            /** Passkey */
+            passkey: string;
+        };
         /** DiagnoseIn */
         DiagnoseIn: {
             /**
@@ -1338,6 +1417,19 @@ export interface components {
             chunks: components["schemas"]["OutputChunk"][];
             /** Plan Id */
             plan_id: string;
+        };
+        /** PairingIn */
+        PairingIn: {
+            confirm: components["schemas"]["CredentialIn"];
+            /** Name */
+            name: string;
+        };
+        /** PairingOut */
+        PairingOut: {
+            /** Expires At */
+            expires_at: string;
+            /** Link */
+            link: string;
         };
         /** PasskeyView */
         PasskeyView: {
@@ -2332,6 +2424,90 @@ export interface operations {
             };
         };
     };
+    list_devices_api_devices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceView"][];
+                };
+            };
+        };
+    };
+    register_api_devices_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_api_devices__device_id__remove_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     set_e2e_api_e2e_post: {
         parameters: {
             query?: never;
@@ -2522,6 +2698,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PasskeyView"][];
+                };
+            };
+        };
+    };
+    pairing_api_passkeys_pairing_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PairingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PairingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

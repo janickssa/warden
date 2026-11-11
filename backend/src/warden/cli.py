@@ -26,7 +26,7 @@ from typing import Any
 from pydantic import ValidationError
 from sqlmodel import Session
 
-from warden import audit, passkeys, settings_store
+from warden import audit, passkeys, push, settings_store
 from warden.actors import ClaudeActor, HumanActor
 from warden.agents import Registry
 from warden.ca import CA
@@ -559,6 +559,7 @@ def _passkey(home: Home, args: argparse.Namespace) -> int:
     if len(match) != 1:
         raise WardenError(f"no single passkey named {args.name!r}", code="not_found")
     pks.remove(match[0].credential_id, actor=_human(), now=now)
+    push.remove_for_credential(engine, match[0].credential_id)
     _out(f"removed {args.name}; its sessions are signed out")
     online_key, approval = _keys(home)
     published = publishing.publish_trust_if_changed(

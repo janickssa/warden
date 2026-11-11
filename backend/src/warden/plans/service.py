@@ -18,7 +18,7 @@ from sqlalchemy import Engine
 from sqlmodel import Session
 from ulid import ULID
 
-from warden import audit
+from warden import audit, notify
 from warden.actors import Actor, ClaudeActor, HumanActor, SystemActor
 from warden.config import Settings
 from warden.errors import (
@@ -273,6 +273,17 @@ class PlanService:
                     {"name": v.name, "verdict": v.verdict.value, "unavailable": v.unavailable}
                     for v in verdicts
                 ],
+            )
+            risk = plan_risk(verdicts)
+            notify.approval_needed(
+                s,
+                plan_id=plan.id,
+                target=plan.target,
+                goal=plan.goal,
+                steps=len(plan.steps),
+                risk=risk.value if risk else None,
+                lang=settings.ui.language,
+                now=self._now(),
             )
         return plan
 
@@ -702,4 +713,15 @@ class PlanService:
                 failed_at=plan.failed_at,
                 fail_reason=plan.fail_reason,
             )
+            if plan.status == S.FAILED and plan.schedule_id is None:  # a schedule reports its own failure
+                notify.plan_failed(
+                    s,
+                    plan_id=plan.id,
+                    target=plan.target,
+                    goal=plan.goal,
+                    failed_at=plan.failed_at,
+                    reason=plan.fail_reason,
+                    lang=self._config().settings.ui.language,
+                    now=self._now(),
+                )
         return plan

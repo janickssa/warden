@@ -6,7 +6,7 @@ import { Certificate, Desktop, DeviceMobile, FloppyDisk, Key, Laptop, LockSimple
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { confirmOptions, isCancel, usePasskey } from "@/components/passkey";
-import { ErrorBox, Header, Page, Seg, Skeleton } from "@/components/ui";
+import { copyText, ErrorBox, Header, Page, Seg, Skeleton } from "@/components/ui";
 import { api, ApiError, post, put } from "@/lib/api";
 import { fmtDate, fmtExact, fmtTime } from "@/lib/format";
 import { N, useT } from "@/lib/i18n";
@@ -381,6 +381,77 @@ function Passkeys() {
           </button>
         )}
       </div>
+      <Phones />
     </Section>
+  );
+}
+
+type Device = { id: string; name: string; created_at: string; last_ok_at: string | null; passkey: string };
+
+/** M8: pair an iPhone (its Face ID device key registers through a one-time link) and its push tokens. */
+function Phones() {
+  const t = useT();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const offline = useOffline();
+  const passkey = usePasskey();
+  const devices = useQuery({ queryKey: ["devices"], queryFn: () => api<Device[]>("/devices") });
+  const [link, setLink] = useState<{ link: string; expires_at: string } | null>(null);
+  const pairPhone = async () => {
+    const name = "iPhone";
+    try {
+      const out = await passkey({
+        title: t("Pair an iPhone"),
+        body: t("Confirm with your passkey. Warden makes a one-time link (15 min) to paste into the Warden app; the app’s Face ID key then signs your approvals."),
+        options: () => confirmOptions("add_passkey", name),
+        submit: (signed) => post<{ link: string; expires_at: string }>("/passkeys/pairing", { name, confirm: signed }),
+      });
+      setLink(out);
+    } catch (e) {
+      if (!isCancel(e)) toast(e instanceof ApiError ? e.message : (e as Error).message, "bad");
+    }
+  };
+  const remove = async (d: Device) => {
+    try {
+      await post(`/devices/${encodeURIComponent(d.id)}/remove`);
+      toast(t("{device} won’t get notifications any more", { device: d.name }), "neutral");
+      qc.invalidateQueries({ queryKey: ["devices"] });
+    } catch (e) {
+      toast((e as Error).message, "bad");
+    }
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 0" }} data-testid="phones">
+      {(devices.data ?? []).map((d) => (
+        <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12 }} data-device={d.name}>
+          <DeviceMobile size={20} color="var(--color-neutral-300)" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14 }}>{d.name}</div>
+            <div style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>
+              {t("Notifications · paired {date}", { date: fmtDate(d.created_at) })}
+              {d.last_ok_at ? ` · ${t("last delivered {time}", { time: fmtExact(d.last_ok_at) })}` : ""}
+            </div>
+          </div>
+          <button className="btn btn-secondary" style={{ fontSize: 13 }} disabled={offline} onClick={() => remove(d)}>
+            {t("Remove")}
+          </button>
+        </div>
+      ))}
+      {link ? (
+        <div className="w-box w-box--accent" style={{ flexDirection: "column", fontSize: 13 }} data-testid="pairing-link">
+          <span>{t("Open the Warden app on your iPhone and paste this link (Universal Clipboard works). It works once, until {time}.", { time: fmtTime(link.expires_at) })}</span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span className="mono" style={{ flex: 1, wordBreak: "break-all" }}>{link.link}</span>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => copyText(link.link).then(() => toast(t("Link copied"), "neutral"))}>
+              {t("Copy")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="btn btn-secondary" style={{ fontSize: 13, alignSelf: "flex-start" }} disabled={offline} onClick={pairPhone}>
+          <DeviceMobile size={15} /> {t("Pair iPhone")}
+        </button>
+      )}
+    </div>
   );
 }

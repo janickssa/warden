@@ -117,7 +117,9 @@ def test_nightly_job_runs_and_reports(monkeypatch: pytest.MonkeyPatch) -> None:
                 run_id,
             )
             with Session(w.engine) as s:
-                kinds = [n.kind for n in s.exec(select(notify.NotificationRow))]
+                kinds = [
+                    n.kind for n in s.exec(select(notify.NotificationRow)) if n.kind != "approval_needed"
+                ]
                 actions = {e.action for e in audit.entries(s)}
                 assert audit.verify(s).ok
             assert kinds == ["scheduled_done"]
@@ -164,6 +166,9 @@ def test_failed_run_stops_the_schedule_and_notifies() -> None:
             assert stopped.status == "stopped"
             assert stopped.row.last_result == "failed"
             with Session(w.engine) as s:
-                assert [n.kind for n in s.exec(select(notify.NotificationRow))] == ["schedule_stopped"]
+                kinds = [
+                    n.kind for n in s.exec(select(notify.NotificationRow)) if n.kind != "approval_needed"
+                ]
+                assert kinds == ["schedule_stopped"]
 
     asyncio.run(scenario())

@@ -17,3 +17,11 @@ agents:
   listen_port: 8443
   # Every name or IP agents use to reach Warden (LAN name, IP, WireGuard address). Goes into the server cert.
   server_names: [warden.lan, 10.0.20.5]
+push:
+  # APNs for the iPhone app (M8). Off until you have an APNs key: developer.apple.com → Keys → "+" with
+  # Apple Push Notifications service. Put the .p8 in <config dir>/secrets/apns.p8 (mode 0600, owner warden).
+  # Warden needs outbound HTTPS to api.push.apple.com; payloads carry titles only, never commands or output.
+  enabled: false
+  key_id: null        # the 10-character Key ID of the .p8
+  team_id: null       # your 10-character Apple Team ID
+  topic: dk.schwabejss.warden

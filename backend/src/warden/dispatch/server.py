@@ -26,7 +26,7 @@ from sqlmodel import Session
 from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 
-from warden import audit
+from warden import audit, notify
 from warden.agents import AgentRow, EnrollmentRefused, Registry
 from warden.ca import CA
 from warden.dispatch import outputs, protocol
@@ -371,6 +371,7 @@ class Dispatcher:
             self._audit(
                 f"agent:{agent}", "plan_refused_by_agent", msg.plan_id, code=msg.code, message=msg.message
             )
+            self._notify_refused(run, f"{msg.code}: {msg.message}")
             run.outcomes = [StepOutcome(n=1, exit_code=126, refused=msg.code)]
             self._finish(run)
         elif isinstance(msg, protocol.StepStarted):
@@ -399,6 +400,7 @@ class Dispatcher:
                     code=msg.refused.code,
                     message=msg.refused.message,
                 )
+                self._notify_refused(run, f"step {msg.n} · {msg.refused.code}: {msg.refused.message}")
             run.outcomes.append(
                 StepOutcome(
                     n=msg.n,
@@ -423,6 +425,18 @@ class Dispatcher:
             run.current = None
         elif isinstance(msg, protocol.RunFinished):
             self._finish(run)
+
+    def _notify_refused(self, run: ActiveRun, reason: str) -> None:
+        """README 17.4 "Agent refused a step": the agent's own reason, never step output."""
+        with Session(self._engine) as s, s.begin():
+            notify.agent_refused(
+                s,
+                plan_id=run.plan.id,
+                target=run.plan.target,
+                reason=reason,
+                lang=self._config().settings.ui.language,
+                now=self._clock(),
+            )
 
     def _finish(self, run: ActiveRun) -> None:
         if run.done.done():

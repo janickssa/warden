@@ -774,4 +774,14 @@ export const da: Record<string, string> = {
   "Passkey name": "Navn på adgangsnøgle",
   "Register": "Registrér",
   "Register passkey": "Registrér adgangsnøgle",
+  "Pair an iPhone": "Par en iPhone",
+  "Confirm with your passkey. Warden makes a one-time link (15 min) to paste into the Warden app; the app’s Face ID key then signs your approvals.":
+    "Bekræft med din adgangsnøgle. Warden laver et engangslink (15 min), som du indsætter i Warden-appen; appens Face ID-nøgle signerer derefter dine godkendelser.",
+  "{device} won’t get notifications any more": "{device} får ikke flere notifikationer",
+  "Notifications · paired {date}": "Notifikationer · parret {date}",
+  "last delivered {time}": "sidst leveret {time}",
+  "Open the Warden app on your iPhone and paste this link (Universal Clipboard works). It works once, until {time}.":
+    "Åbn Warden-appen på din iPhone, og indsæt dette link (Universel udklipsholder virker). Det virker én gang, indtil kl. {time}.",
+  "Link copied": "Link kopieret",
+  "Pair iPhone": "Par iPhone",
 };

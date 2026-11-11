@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from sqlmodel import Session
 
-from warden import settings_store
+from warden import push, settings_store
 from warden.actors import HumanActor
 from warden.api import schemas as sc
 from warden.api.auth import Ctx, Human, SessionDep
@@ -124,6 +124,7 @@ def passkeys(c: Ctx, _: Human) -> list[sc.PasskeyView]:
 async def remove_passkey(credential_id: str, body: sc.ConfirmIn, c: Ctx, human: Human) -> sc.Ok:
     c.passkeys.verify(body.challenge_id, body.credential, "remove_passkey", credential_id, now=c.now())
     c.passkeys.remove(credential_id, actor=human, now=c.now())
+    push.remove_for_credential(c.engine, credential_id)
     r = await publish_trust_now(c, human)
     return sc.Ok(message="passkey removed" + (f" · approver list published as v{r.version}" if r else ""))
 
