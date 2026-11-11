@@ -18,3 +18,4 @@ engine's own tests.
 - `cron_vectors.json`: schedule cron slots in Europe/Copenhagen (incl. DST days) and refused expressions (M7).
 - `schedule_vectors.json`: a schedule run signed in Python (approval key + passkey) that the agent must accept, and refuse when mutated (M7).
 - `ios_webauthn_vectors.json`: the iPhone's Face ID device key (M8): registration and assertion bytes WardenCore must rebuild exactly, accepted by py_webauthn and the Go agent.
+- `api_examples.json`: real dashboard API responses (M8) that the iPhone's WardenCore must decode; backend/tests/test_api_examples.py keeps their shape current.

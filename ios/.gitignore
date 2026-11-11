@@ -1,0 +1,6 @@
+.build/
+Packages/*/.build/
+Packages/*/Package.resolved.bak
+xtool/
+*.ipa
+.swiftpm/

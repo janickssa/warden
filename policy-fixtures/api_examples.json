@@ -1,0 +1,581 @@
+{
+ "approval_options": {
+  "challenge_id": "Xa7nH5RF1_lzcWGM7F8RXw",
+  "needs_passkey": false,
+  "options": {
+   "allowCredentials": [
+    {
+     "id": "gCydr3oiYkwb0-1ulVjO1A",
+     "type": "public-key"
+    }
+   ],
+   "challenge": "RkbujJhz4KM2B37Q87YpXoHr4rwVLRVWkCbodox5mt0",
+   "rpId": "localhost",
+   "timeout": 60000,
+   "userVerification": "required"
+  },
+  "reasons": []
+ },
+ "approvals": {
+  "counts": {
+   "pending": 1
+  },
+  "plans": [
+   {
+    "agent": {
+     "latest_version": 1,
+     "policy_version": null,
+     "state": "missing",
+     "warning": "No agent is enrolled for dev yet."
+    },
+    "changed_steps": null,
+    "created_at": "2026-10-20T12:00:00+00:00",
+    "decided_at": null,
+    "expires_at": "2026-10-20T12:30:00+00:00",
+    "fail_reason": null,
+    "failed_at": null,
+    "final_verdict": "escalate",
+    "gatekeeper_unavailable": false,
+    "goal": "Deploy myapp on dev and verify HTTP health",
+    "held_reason": null,
+    "id": "pln_01M76019ATGRYQ962N3W8ED7TQ",
+    "invalidated_by": null,
+    "requested_by": "claude-code",
+    "revises": null,
+    "risk": null,
+    "schedule_id": null,
+    "slot": null,
+    "status": "awaiting_approval",
+    "steps": 2,
+    "target": "dev"
+   },
+   {
+    "agent": null,
+    "changed_steps": null,
+    "created_at": "2026-10-20T12:00:00+00:00",
+    "decided_at": "2026-10-20T12:00:00+00:00",
+    "expires_at": "2026-10-20T12:30:00+00:00",
+    "fail_reason": null,
+    "failed_at": null,
+    "final_verdict": "escalate",
+    "gatekeeper_unavailable": false,
+    "goal": "Deploy myapp on dev and verify HTTP health",
+    "held_reason": null,
+    "id": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "invalidated_by": null,
+    "requested_by": "claude-code",
+    "revises": null,
+    "risk": null,
+    "schedule_id": null,
+    "slot": null,
+    "status": "succeeded",
+    "steps": 1,
+    "target": "dev"
+   }
+  ]
+ },
+ "devices": [],
+ "feed": {
+  "items": [
+   {
+    "action": "schedule_created",
+    "actor": "dashboard:MacBook",
+    "plan_id": null,
+    "seq": 15,
+    "subject": "sch_01M76019CF9KT5J17EMSS8AEXG",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "schedule"
+   },
+   {
+    "action": "run_finished",
+    "actor": "warden",
+    "plan_id": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "seq": 14,
+    "subject": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "run"
+   },
+   {
+    "action": "step_ok",
+    "actor": "agent:dev",
+    "plan_id": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "seq": 13,
+    "subject": "pln_01M76019B4S3374TFZ63S1XNZM · step 1",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "run"
+   },
+   {
+    "action": "run_started",
+    "actor": "warden",
+    "plan_id": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "seq": 12,
+    "subject": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "run"
+   },
+   {
+    "action": "approve",
+    "actor": "cli:alice",
+    "plan_id": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "seq": 11,
+    "subject": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "approval"
+   },
+   {
+    "action": "review",
+    "actor": "warden",
+    "plan_id": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "seq": 10,
+    "subject": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "verdict"
+   },
+   {
+    "action": "propose_plan",
+    "actor": "claude-code",
+    "plan_id": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "seq": 9,
+    "subject": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "proposal"
+   },
+   {
+    "action": "review",
+    "actor": "warden",
+    "plan_id": "pln_01M76019ATGRYQ962N3W8ED7TQ",
+    "seq": 8,
+    "subject": "pln_01M76019ATGRYQ962N3W8ED7TQ",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "verdict"
+   },
+   {
+    "action": "propose_plan",
+    "actor": "claude-code",
+    "plan_id": "pln_01M76019ATGRYQ962N3W8ED7TQ",
+    "seq": 7,
+    "subject": "pln_01M76019ATGRYQ962N3W8ED7TQ",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "proposal"
+   },
+   {
+    "action": "policy_publish",
+    "actor": "cli:alice",
+    "plan_id": null,
+    "seq": 6,
+    "subject": "sec-auth · v1 · initial",
+    "target": "sec-auth",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "policy"
+   },
+   {
+    "action": "policy_publish",
+    "actor": "cli:alice",
+    "plan_id": null,
+    "seq": 5,
+    "subject": "dev2 · v1 · initial",
+    "target": "dev2",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "policy"
+   },
+   {
+    "action": "policy_publish",
+    "actor": "cli:alice",
+    "plan_id": null,
+    "seq": 4,
+    "subject": "dev · v1 · initial",
+    "target": "dev",
+    "ts": "2026-10-20T12:00:00+00:00",
+    "type": "policy"
+   }
+  ]
+ },
+ "login_options": {
+  "challenge_id": "YeLvH9iYDv3vsA4ofs0IYw",
+  "options": {
+   "allowCredentials": [],
+   "challenge": "6k73qkr_LTl4dvuGH21sKND8i78DJIkHU9nHjVdb7NA",
+   "rpId": "localhost",
+   "timeout": 60000,
+   "userVerification": "required"
+  }
+ },
+ "me": {
+  "expires_at": "2026-10-21T00:00:00+00:00",
+  "name": "MacBook"
+ },
+ "output": {
+  "cap_bytes": 1048576,
+  "chunks": [],
+  "plan_id": "pln_01M76019B4S3374TFZ63S1XNZM"
+ },
+ "plan_succeeded": {
+  "agent": {
+   "latest_version": 1,
+   "policy_version": null,
+   "state": "missing",
+   "warning": "No agent is enrolled for dev yet."
+  },
+  "approval": {
+   "at": "2026-10-20T12:00:00+00:00",
+   "by": "cli:alice",
+   "hash": "sha256:b036d881026808c7a8af5c8bfb0188c48d77ac1fafeb0ef4bbf0c34f42e2bb3e",
+   "key_id": "ed25519:07dbfe1913ecc2fb",
+   "passkey": null
+  },
+  "changed_steps": null,
+  "created_at": "2026-10-20T12:00:00+00:00",
+  "decided_at": "2026-10-20T12:00:00+00:00",
+  "diagnoses": [],
+  "diff": [],
+  "e2e": false,
+  "ended_at": "2026-10-20T12:00:00+00:00",
+  "expires_at": "2026-10-20T12:30:00+00:00",
+  "fail_reason": null,
+  "failed_at": null,
+  "final_verdict": "escalate",
+  "gatekeeper_unavailable": false,
+  "goal": "Deploy myapp on dev and verify HTTP health",
+  "hash": "sha256:b036d881026808c7a8af5c8bfb0188c48d77ac1fafeb0ef4bbf0c34f42e2bb3e",
+  "held_reason": null,
+  "human_note": null,
+  "id": "pln_01M76019B4S3374TFZ63S1XNZM",
+  "invalid_reason": null,
+  "invalidated_by": null,
+  "passkey_reasons": [],
+  "passkeys_registered": 1,
+  "policy_ok": true,
+  "policy_version": 1,
+  "previous": null,
+  "reject_reason": null,
+  "requested_by": "claude-code",
+  "reviewers": [],
+  "reviewers_disagree": false,
+  "revises": null,
+  "revisions": [],
+  "risk": null,
+  "schedule_id": null,
+  "slot": null,
+  "started_at": "2026-10-20T12:00:00+00:00",
+  "status": "succeeded",
+  "step_list": [
+   {
+    "command": "git status",
+    "cwd": "/srv/dev/myapp",
+    "duration_s": 1.5,
+    "edited": false,
+    "exit_code": 0,
+    "expect_exit": 0,
+    "kind": "git",
+    "n": 1,
+    "output_truncated": false,
+    "purpose": "Step 1",
+    "reason": null,
+    "status": "succeeded",
+    "timeout_s": 60
+   }
+  ],
+  "steps": 1,
+  "target": "dev",
+  "violations": []
+ },
+ "plan_waiting": {
+  "agent": {
+   "latest_version": 1,
+   "policy_version": null,
+   "state": "missing",
+   "warning": "No agent is enrolled for dev yet."
+  },
+  "approval": null,
+  "changed_steps": null,
+  "created_at": "2026-10-20T12:00:00+00:00",
+  "decided_at": null,
+  "diagnoses": [],
+  "diff": [],
+  "e2e": false,
+  "ended_at": null,
+  "expires_at": "2026-10-20T12:30:00+00:00",
+  "fail_reason": null,
+  "failed_at": null,
+  "final_verdict": "escalate",
+  "gatekeeper_unavailable": false,
+  "goal": "Deploy myapp on dev and verify HTTP health",
+  "hash": "sha256:8bf5deebf517cd551087465818114c86eb695296bb0f38d5d6d1152f306b74e5",
+  "held_reason": null,
+  "human_note": null,
+  "id": "pln_01M76019ATGRYQ962N3W8ED7TQ",
+  "invalid_reason": null,
+  "invalidated_by": null,
+  "passkey_reasons": [],
+  "passkeys_registered": 1,
+  "policy_ok": true,
+  "policy_version": 1,
+  "previous": null,
+  "reject_reason": null,
+  "requested_by": "claude-code",
+  "reviewers": [],
+  "reviewers_disagree": false,
+  "revises": null,
+  "revisions": [],
+  "risk": null,
+  "schedule_id": null,
+  "slot": null,
+  "started_at": null,
+  "status": "awaiting_approval",
+  "step_list": [
+   {
+    "command": "npm ci",
+    "cwd": "/srv/dev/myapp",
+    "duration_s": null,
+    "edited": false,
+    "exit_code": null,
+    "expect_exit": 0,
+    "kind": "shell",
+    "n": 1,
+    "output_truncated": false,
+    "purpose": "Step 1",
+    "reason": null,
+    "status": null,
+    "timeout_s": 60
+   },
+   {
+    "command": "npm test",
+    "cwd": "/srv/dev/myapp",
+    "duration_s": null,
+    "edited": false,
+    "exit_code": null,
+    "expect_exit": 0,
+    "kind": "shell",
+    "n": 2,
+    "output_truncated": false,
+    "purpose": "Step 2",
+    "reason": null,
+    "status": null,
+    "timeout_s": 60
+   }
+  ],
+  "steps": 2,
+  "target": "dev",
+  "violations": []
+ },
+ "plans": {
+  "counts": {
+   "all": 2,
+   "approved_running": 0,
+   "awaiting": 1,
+   "closed": 0,
+   "failed": 0,
+   "invalidated": 0,
+   "succeeded": 1
+  },
+  "plans": [
+   {
+    "agent": null,
+    "changed_steps": null,
+    "created_at": "2026-10-20T12:00:00+00:00",
+    "decided_at": "2026-10-20T12:00:00+00:00",
+    "expires_at": "2026-10-20T12:30:00+00:00",
+    "fail_reason": null,
+    "failed_at": null,
+    "final_verdict": "escalate",
+    "gatekeeper_unavailable": false,
+    "goal": "Deploy myapp on dev and verify HTTP health",
+    "held_reason": null,
+    "id": "pln_01M76019B4S3374TFZ63S1XNZM",
+    "invalidated_by": null,
+    "requested_by": "claude-code",
+    "revises": null,
+    "risk": null,
+    "schedule_id": null,
+    "slot": null,
+    "status": "succeeded",
+    "steps": 1,
+    "target": "dev"
+   },
+   {
+    "agent": null,
+    "changed_steps": null,
+    "created_at": "2026-10-20T12:00:00+00:00",
+    "decided_at": null,
+    "expires_at": "2026-10-20T12:30:00+00:00",
+    "fail_reason": null,
+    "failed_at": null,
+    "final_verdict": "escalate",
+    "gatekeeper_unavailable": false,
+    "goal": "Deploy myapp on dev and verify HTTP health",
+    "held_reason": null,
+    "id": "pln_01M76019ATGRYQ962N3W8ED7TQ",
+    "invalidated_by": null,
+    "requested_by": "claude-code",
+    "revises": null,
+    "risk": null,
+    "schedule_id": null,
+    "slot": null,
+    "status": "awaiting_approval",
+    "steps": 2,
+    "target": "dev"
+   }
+  ]
+ },
+ "problem": {
+  "detail": {
+   "code": "hash_prefix",
+   "message": "give at least the first 12 hex characters of the plan hash"
+  }
+ },
+ "schedule": {
+  "approved_at": null,
+  "approved_by": null,
+  "created_at": "2026-10-20T12:00:00+00:00",
+  "created_by": "dashboard:MacBook",
+  "cron": "0 3 * * *",
+  "expires_at": null,
+  "expiry_days": 90,
+  "final_verdict": "escalate",
+  "goal": "Deploy myapp on dev and verify HTTP health",
+  "id": "sch_01M76019CF9KT5J17EMSS8AEXG",
+  "last_detail": null,
+  "last_result": null,
+  "last_run_at": null,
+  "last_run_id": null,
+  "name": "nightly",
+  "next_run": null,
+  "passkey": null,
+  "risk": null,
+  "runs": [],
+  "source_plan": "pln_01M76019B4S3374TFZ63S1XNZM",
+  "status": "awaiting_approval",
+  "status_reason": null,
+  "step_list": [
+   {
+    "command": "git status",
+    "cwd": "/srv/dev/myapp",
+    "duration_s": null,
+    "edited": false,
+    "exit_code": null,
+    "expect_exit": 0,
+    "kind": "git",
+    "n": 1,
+    "output_truncated": false,
+    "purpose": "Step 1",
+    "reason": null,
+    "status": null,
+    "timeout_s": 60
+   }
+  ],
+  "steps": 1,
+  "target": "dev",
+  "template_hash": "sha256:3319126001987fb090f1ae695a2bc34d5f774c11baa23c7c8f41c65a87d144b9",
+  "when": "Every day at 03:00"
+ },
+ "schedules": [
+  {
+   "approved_at": null,
+   "approved_by": null,
+   "created_at": "2026-10-20T12:00:00+00:00",
+   "created_by": "dashboard:MacBook",
+   "cron": "0 3 * * *",
+   "expires_at": null,
+   "expiry_days": 90,
+   "goal": "Deploy myapp on dev and verify HTTP health",
+   "id": "sch_01M76019CF9KT5J17EMSS8AEXG",
+   "last_detail": null,
+   "last_result": null,
+   "last_run_at": null,
+   "last_run_id": null,
+   "name": "nightly",
+   "next_run": null,
+   "passkey": null,
+   "source_plan": "pln_01M76019B4S3374TFZ63S1XNZM",
+   "status": "awaiting_approval",
+   "status_reason": null,
+   "steps": 1,
+   "target": "dev",
+   "template_hash": "sha256:3319126001987fb090f1ae695a2bc34d5f774c11baa23c7c8f41c65a87d144b9",
+   "when": "Every day at 03:00"
+  }
+ ],
+ "status": {
+  "agents": [
+   {
+    "agent_version": null,
+    "enrolled_at": null,
+    "fingerprint": null,
+    "groups": [],
+    "id": null,
+    "kind": "VM",
+    "last_seen": null,
+    "latest_version": 1,
+    "name": "dev",
+    "online": false,
+    "policy_version": null,
+    "remote_addr": null,
+    "revoked_at": null,
+    "status": "not_enrolled",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   },
+   {
+    "agent_version": null,
+    "enrolled_at": null,
+    "fingerprint": null,
+    "groups": [],
+    "id": null,
+    "kind": "VM",
+    "last_seen": null,
+    "latest_version": 1,
+    "name": "dev2",
+    "online": false,
+    "policy_version": null,
+    "remote_addr": null,
+    "revoked_at": null,
+    "status": "not_enrolled",
+    "workspace_roots": [
+     "/srv/dev"
+    ]
+   },
+   {
+    "agent_version": null,
+    "enrolled_at": null,
+    "fingerprint": null,
+    "groups": [
+     "high-security"
+    ],
+    "id": null,
+    "kind": "LXC · unprivileged",
+    "last_seen": null,
+    "latest_version": 1,
+    "name": "sec-auth",
+    "online": false,
+    "policy_version": null,
+    "remote_addr": null,
+    "revoked_at": null,
+    "status": "not_enrolled",
+    "workspace_roots": [
+     "/srv/app"
+    ]
+   }
+  ],
+  "awaiting": 1,
+  "e2e": false,
+  "gatekeepers": [],
+  "language": "en",
+  "lockdown": false,
+  "me": "MacBook",
+  "passkeys": 1,
+  "pending_publish": null,
+  "policy_version": 1,
+  "running": [],
+  "schedules_awaiting": 1
+ }
+}
