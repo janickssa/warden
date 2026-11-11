@@ -513,7 +513,9 @@ Plans longer than `chat_max_steps` (setting, default 10) show a summary and a da
 
 - **Confirmed: Warden ships with a native iPhone app.** It is built at M8 with the iOS build skill you provide then, which follows the Linux pipeline below.
 - SwiftUI app on the same REST + WebSocket API. APNs push for "awaiting approval", "plan failed" and "scheduled run finished".
-- Approve/reject from an actionable notification, with Face ID required to approve.
+- Approve/reject from an actionable notification, with Face ID required to approve. A notification content extension shows every command (fetched over WireGuard, never sent through Apple); high-risk plans open the app.
+- **Signing:** a Face ID device key in the Secure Enclave, registered as an approver like a passkey, signs the same WebAuthn approvals agents verify (DECISIONS M8-01). Pair by pasting the one-time link from Settings → Pair iPhone. Nothing has to be reachable from the internet.
+- **Push:** Warden sends APNs pushes itself (`settings.push`, a `.p8` key in the secrets directory, outbound HTTPS to Apple only), honouring the notification settings per event type.
 - Must follow the existing Linux iOS pipeline: SwiftPM + `xtool.yml`, no Xcode project files, built and shipped by the Forgejo `ios` runner via `ship.sh`. API models and decoding live in a Foundation-only `WardenCore` package so `swift test` runs on Linux.
 - Bundle ID `dk.<owner>.warden`. Apple-side setup (app record, Push capability, APNs key) is done manually on developer.apple.com.
 - Screens, notifications and states: see section 17.
@@ -641,8 +643,8 @@ sudo cp deploy/warden-agent.service /etc/systemd/system/ && sudo systemctl enabl
 warden-sign keygen --out ~/.warden/offline.key          # passphrase-encrypted; YubiKey support later
 warden-sign keygen --out /media/usb/offline-backup.key   # backup key on another device
 # then on the warden guest, before enrolling agents (agents pin these at enrollment):
-warden keys offline register --public <public from keygen>
-warden keys offline register --public <backup public> --backup
+warden keys offline register --public=<public from keygen>   # "=": a key can start with "-"
+warden keys offline register --public=<backup public> --backup
 ```
 
 ### On the `ai` VM

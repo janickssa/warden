@@ -71,7 +71,7 @@ const offlineKey = join(root, "offline.key");
 const passphrase = join(root, "offline.pass");
 writeFileSync(passphrase, "correct horse battery staple\n", { mode: 0o600 });
 const keygen = execFileSync(sign, ["keygen", "--out", offlineKey, "--passphrase-file", passphrase], { encoding: "utf8" });
-warden("keys", "offline", "register", "--public", keygen.match(/public: (\S+)/)[1]);
+warden("keys", "offline", "register", `--public=${keygen.match(/public: (\S+)/)[1]}`); // "=": a key can start with "-"
 warden("policy", "publish"); // v1, as at installation
 run(python, ["-m", "warden.cli", "--home", home, "--config-dir", cfg, "serve"], { env });
 const until = async (check, what) => {

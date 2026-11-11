@@ -150,6 +150,18 @@ These are all stricter than or equal to the spec. Where they change README text,
 | M7-07 | Notifications | An outbox table, written in the same transaction as the event. The iPhone app delivers it in M8, honouring `settings.notifications`. The dashboard shows the same events in the feed. |
 | M7-08 | Approver list first | A schedule approval only works on agents that already trust that passkey. Adding a passkey loosens (M6-03), so its approver-list bundle needs the offline signature; until then the agent refuses the schedule's runs (`bad_passkey`). |
 
+## B9. Decisions made while building M8
+
+| ID | Topic | Decision |
+|---|---|---|
+| M8-01 | How the iPhone signs (asked 11.11.2026) | A **Face ID device key**: P-256 in the Secure Enclave, `.biometryCurrentSet`, never exportable. It's registered as an approver exactly like a passkey, through a WebAuthn "none" attestation the app builds. Sign-in and approvals are WebAuthn assertions over the same challenges, so Warden and agents verify them unchanged. The byte layout is pinned in `ios_webauthn_vectors.json`: compact client data, counter 0, credential ID = SHA-256 of the public key (first 16 bytes). An iCloud passkey was the alternative, but it needs a publicly reachable `apple-app-site-association`, which would break VPN-only. |
+| M8-02 | Lock-screen approval (asked 11.11.2026) | A notification content extension shows every command, fetched over WireGuard; Approve asks for Face ID and signs inside the extension. High-risk plans are "open in app" only. That Face ID works inside the extension is the one thing to prove on TestFlight; the fallback opens the app on that plan. |
+| M8-03 | Pairing | The one-time link from Settings → Pair iPhone (passkey-confirmed) or `warden passkey add iPhone`, pasted into the app. There's no QR code (no camera permission, no new dependency); Universal Clipboard covers the Mac → iPhone hop. Adding the iPhone loosens like any approver: sign that bundle offline. |
+| M8-04 | Push | Delivered over APNs HTTP/2 with an ES256 provider token (`.p8` in the secrets directory). It's off until `settings.push` is set and honours `settings.notifications` per kind. Payloads carry titles, the category and the plan or schedule ID only. Commands and output never go through Apple; a failure push names the step and reason, not the output. Texts follow `ui.language`. Removing a passkey removes its devices; 410 drops a device. |
+| M8-05 | The app's session | The same cookie session as the browser, shared with the extension through the App Group's cookie store; the app holds no other secret. When the 12 h session ends, the next action signs in again with the same Face ID. The approval reads `dashboard:iPhone`: the channel stays `dashboard`, and the device key's name says it was the iPhone. |
+| M8-06 | Live updates | The app polls every 5 s while open (2 s on a running plan) instead of the WebSocket; pushes cover the rest. That's simpler and robust when WireGuard reconnects. The WebSocket can come later without API changes. |
+| M8-07 | What's MISSING | The Forgejo host and user (`.forgejo/workflows/ios.yml`) and the Apple Team ID (both entitlements) are placeholders marked `MISSING`, as asked, until Forgejo is up. Until then GitHub runs `WardenCore`'s tests (`ios-core`); the app target is only built by the Forgejo runner. Nothing iOS-specific has been compiled yet. |
+
 ## C. README ↔ prototype disagreements
 
 | ID | Where | README says | Prototype does | Resolution |
@@ -180,4 +192,4 @@ These are all stricter than or equal to the spec. Where they change README text,
 
 - **Prototype test count "148/148".** This is mock data. The real policy test suite will be the shared fixture corpus (target ≥ 150 cases at M1).
 - **`main` commit message.** The README update on `main` has the subject "Update print statement from 'Hello' to 'Goodbye'". It's harmless, but worth knowing if you search history.
-- **Swift isn't installed** in this cloud container. That only matters at M8, where the Forgejo `ios` runner builds the app and `WardenCore` tests can run in a Swift container.
+- **Swift 6.4.1 (Linux)** was installed in the cloud session for M8, so `WardenCore` is tested here and on GitHub (`ios-core`). The iOS SDK isn't available on Linux outside the Forgejo runner's darwin SDK, so the app target is only built there.

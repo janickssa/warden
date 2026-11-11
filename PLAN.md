@@ -964,6 +964,25 @@ Built with the owner's `iphone-app` and `forgejo-ios` skills (they take preceden
 3. `ios: app and notification extension`
 4. `ci/docs: Forgejo workflow (host/team MISSING), Apple checklist, M8 docs`
 
+### M8 status ◐ (11.11.2026): code complete, Done-when waits for Forgejo, the Team ID and TestFlight
+
+Done and tested:
+- **Backend:** pairing link, devices, APNs delivery, the notification events. Tests: `test_push.py`,
+  `test_api_devices.py` (pair → register the device key → sign in → push token → approve with the device key →
+  removed with the passkey), `test_api_examples.py`.
+- **Shared vectors:** `ios_webauthn_vectors.json` is accepted by py_webauthn and verified by the Go agent
+  (`internal/webauthn/device_test.go`).
+- **WardenCore:** `swift test` passes on Linux (18 tests) and runs on GitHub (`ios-core`). Its WebAuthn bytes
+  are equal to the vectors, every real API response decodes, bug 3 is covered, and every string has Danish.
+- **App and extension:** every file passes `swiftc -parse`, the manifest resolves, and `xtool.yml` follows
+  xtool's schema.
+
+Not done yet:
+- **Not compiled for iOS:** the iOS SDK only exists on the Forgejo runner.
+- **The Done-when** ("approve from the lock screen") is the manual check in `docs/m8-demo.md`. It needs the
+  Forgejo host/user and the Team ID (marked MISSING) and the Apple-side setup in `ios/README.md`.
+- **Face ID inside the notification extension** is the one behaviour to prove on TestFlight (M8-02).
+
 ## M9 Public MCP — **stop and ask before starting** (OAuth inside Warden vs. an IdP such as Authentik).
 
 ## M10 Agent updates — outline

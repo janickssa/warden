@@ -1,0 +1,47 @@
+name: iOS
+
+# ┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+# │ MISSING — fill in before the first run (Forgejo isn't up yet, 11.11.2026):                      │
+# │   1. MISSING_FORGEJO_HOST / MISSING_FORGEJO_USER in the `uses:` line below                      │
+# │      (the ios-ship action: https://<forgejo host>/<your user>/ios-ship@v1).                     │
+# │   2. MISSING_TEAMID in ios/App.entitlements and ios/Notify.entitlements (your Apple Team ID).    │
+# │ See ios/README.md for the full checklist.                                                        │
+# └─────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+# Push and manual runs only, never pull requests: the runner executes jobs directly on the build machine,
+# so only commits from people with write access may reach it (forgejo-ios rules).
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', 'policy-fixtures/**', '.forgejo/workflows/ios.yml']
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload to TestFlight
+        type: boolean
+        default: true
+
+jobs:
+  ship:
+    runs-on: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ship
+        uses: https://MISSING_FORGEJO_HOST/MISSING_FORGEJO_USER/ios-ship@v1
+        with:
+          guard-token: ${{ secrets.IOS_RUNNER_GUARD }}
+          project-dir: ios
+          bundle-id: dk.schwabejss.warden
+          upload: ${{ github.event_name == 'push' || inputs.upload }}
+          core-package: ios/Packages/WardenCore
+          asc-key-p8: ${{ secrets.ASC_KEY_P8 }}
+          asc-key-id: ${{ secrets.ASC_KEY_ID }}
+          asc-issuer-id: ${{ secrets.ASC_ISSUER_ID }}
+
+      - uses: https://code.forgejo.org/forgejo/upload-artifact@v4
+        if: steps.ship.outputs.ipa-path != ''
+        with:
+          name: ipa-${{ github.sha }}
+          path: ${{ steps.ship.outputs.ipa-path }}
+          retention-days: 30

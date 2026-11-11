@@ -54,7 +54,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("Offline key created: %s\nkey_id: %s\npublic: %s\n\nRegister the public key on the warden guest:\n  warden keys offline register --public %s\nKeep a backup key on a second device: run keygen again with another --out and register it with --backup.\n",
+		fmt.Printf("Offline key created: %s\nkey_id: %s\npublic: %s\n\nRegister the public key on the warden guest:\n  warden keys offline register --public=%s\nKeep a backup key on a second device: run keygen again with another --out and register it with --backup.\n",
 			*out, f.KeyID, f.Public, f.Public)
 	case "pubkey":
 		f, err := offline.Load(*keyPath)

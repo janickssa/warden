@@ -1,0 +1,25 @@
+name: ios-core
+
+# WardenCore's Linux tests on GitHub until the Forgejo `ios` runner builds the whole app (M8). The app
+# itself needs the iOS SDK, so it's only built there.
+on:
+  push:
+    paths: ['ios/**', 'policy-fixtures/**', 'web/src/lib/da.ts', 'design/tokens.json', '.github/workflows/ios-core.yml']
+  pull_request:
+    paths: ['ios/**', 'policy-fixtures/**']
+
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift 6.4.1 (the runner's toolchain)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/swift.tgz" https://download.swift.org/swift-6.4.1-release/ubuntu2404/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-ubuntu24.04.tar.gz
+          tar xzf "$RUNNER_TEMP/swift.tgz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/swift-6.4.1-RELEASE-ubuntu24.04/usr/bin" >> "$GITHUB_PATH"
+      - run: python3 ios/scripts/gen-danish.py --check
+      - run: python3 ios/scripts/gen-theme.py --check
+      - run: swift test --package-path ios/Packages/WardenCore
+      - name: Every Swift file parses
+        run: find ios/Sources -name '*.swift' -print0 | xargs -0 -n1 swiftc -parse
