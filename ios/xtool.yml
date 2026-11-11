@@ -1,0 +1,12 @@
+# xtool project (schema checked against xtool's PackSchema.swift, 07.11.2026).
+version: 1
+bundleID: dk.schwabejss.warden
+product: Warden
+infoPath: Info.plist
+entitlementsPath: App.entitlements
+iconPath: Resources/AppIcon.png
+extensions:
+  - product: WardenNotify
+    bundleID: dk.schwabejss.warden.notify
+    infoPath: Notify-Info.plist
+    entitlementsPath: Notify.entitlements

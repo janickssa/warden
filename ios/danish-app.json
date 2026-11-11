@@ -1,4 +1,26 @@
 {
-  "✕ Failed at step {n}. Claude must propose a revision.": "✕ Fejlede ved trin {n}. Claude skal foreslå en revision.",
-  "⏸ Approved {time} · held. It runs as soon as it can.": "⏸ Godkendt {time} · holdt tilbage. Den kører, så snart den kan."
+ "Activity": "Aktivitet",
+ "Approve (Face ID)": "Godkend (Face ID)",
+ "Approve {id} on {target}": "Godkend {id} på {target}",
+ "High-risk plans are approved in the app. Tap to open it.": "Planer med høj risiko godkendes i appen. Tryk for at åbne den.",
+ "In the dashboard, open Settings → Passkeys & sessions → Pair iPhone, copy the link and paste it here. Face ID then creates a key that never leaves this iPhone.": "Åbn Indstillinger → Adgangsnøgler og sessioner → Par iPhone i dashboardet, kopiér linket og indsæt det her. Face ID laver så en nøgle, der aldrig forlader denne iPhone.",
+ "Keep holding…": "Bliv ved med at holde…",
+ "Lifting needs the offline key, in the dashboard.": "At ophæve kræver offlinenøglen, i dashboardet.",
+ "Open Warden to pair this iPhone first.": "Åbn Warden for at parre denne iPhone først.",
+ "Pair this iPhone": "Par denne iPhone",
+ "Pair this iPhone with Warden": "Par denne iPhone med Warden",
+ "Pair with Face ID": "Par med Face ID",
+ "Paste": "Indsæt",
+ "Running": "Kører",
+ "Sign in again with Face ID.": "Log ind igen med Face ID.",
+ "Sign in to Warden": "Log ind på Warden",
+ "Test connection": "Test forbindelsen",
+ "The Face ID key is deleted from this iPhone. Remove it in the dashboard too, so agents stop trusting it.": "Face ID-nøglen slettes fra denne iPhone. Fjern den også i dashboardet, så agenterne holder op med at stole på den.",
+ "This plan isn’t waiting for approval any more.": "Denne plan venter ikke længere på godkendelse.",
+ "Unpair": "Fjern parring",
+ "Unpair this iPhone": "Fjern parring af denne iPhone",
+ "Waiting for Face ID…": "Venter på Face ID…",
+ "⏸ Approved {time} · held. It runs as soon as it can.": "⏸ Godkendt {time} · holdt tilbage. Den kører, så snart den kan.",
+ "✓ Connected · policy v{v}": "✓ Forbundet · policy v{v}",
+ "✕ Failed at step {n}. Claude must propose a revision.": "✕ Fejlede ved trin {n}. Claude skal foreslå en revision."
 }

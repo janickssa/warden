@@ -121,6 +121,20 @@ func XCTAssertThrowsErrorAsync(_ expr: @autoclosure () async throws -> some Any,
     }
 }
 
+final class SettingsTests: XCTestCase {
+    func testNotificationPrefsRoundTrip() async throws {
+        let body = Data(#"{"values": {"notifications.approval_needed": true, "notifications.plan_failed": false, "ui.language": "da"}}"#.utf8)
+        let fake = Fake([(200, body), (200, body)])
+        let api = APIClient(server: URL(string: "https://warden.example.dk")!, transport: fake)!
+        let prefs = try await api.notificationPrefs()
+        XCTAssertEqual(prefs.values, ["approval_needed": true, "plan_failed": false])
+        _ = try await api.setNotification("plan_failed", true)
+        let sent = String(decoding: fake.requests[1].httpBody ?? Data(), as: UTF8.self)
+        XCTAssertEqual(fake.requests[1].httpMethod, "PUT")
+        XCTAssertEqual(sent, #"{"changes":{"notifications.plan_failed":true}}"#)
+    }
+}
+
 /// Every string the app shows through `.t("…")` has a Danish entry (README 17.2).
 final class L10nTests: XCTestCase {
     func testEveryAppStringHasDanish() throws {

@@ -107,6 +107,21 @@ struct ReasonBody: Encodable { var reason: String? }
 struct EditBody: Encodable { var edits: [Edit]; struct Edit: Encodable { var n: Int; var command: String } }
 struct ConfirmBody: Encodable { var purpose: String; var subject: String }
 struct DeviceBody: Encodable { var token: String; var name: String }
+struct SettingsBody: Encodable { var changes: [String: Bool] }
+
+/// The notification switches (`settings.notifications`, README 17.4), as Warden stores them.
+public struct NotificationPrefs: Equatable, Sendable {
+    public static let keys = ["approval_needed", "plan_failed", "agent_refused", "scheduled_done"]
+    public var values: [String: Bool]
+
+    init(_ settings: JSONValue) {
+        var v: [String: Bool] = [:]
+        for k in Self.keys {
+            if case .bool(let b)? = settings["values"]?["notifications.\(k)"] { v[k] = b }
+        }
+        values = v
+    }
+}
 
 extension APIClient {
     public func status() async throws -> StatusView { try await call("GET", "status") }
@@ -148,6 +163,12 @@ extension APIClient {
         try await call("POST", "confirm/options", body: ConfirmBody(purpose: purpose, subject: subject))
     }
     public func lockdown(_ signed: SignedChallenge) async throws -> PublishResult { try await call("POST", "lockdown", body: signed) }
+    public func notificationPrefs() async throws -> NotificationPrefs {
+        NotificationPrefs(try await call("GET", "settings", as: JSONValue.self))
+    }
+    public func setNotification(_ key: String, _ on: Bool) async throws -> NotificationPrefs {
+        NotificationPrefs(try await call("PUT", "settings", body: SettingsBody(changes: ["notifications.\(key)": on]), as: JSONValue.self))
+    }
     public func pauseSchedule(_ id: String) async throws -> ScheduleView { try await call("POST", "schedules/\(id)/pause") }
     public func resumeSchedule(_ id: String) async throws -> ScheduleView { try await call("POST", "schedules/\(id)/resume") }
     public func scheduleApprovalOptions(_ id: String) async throws -> ApproveOptions {

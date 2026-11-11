@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- MISSING: replace MISSING_TEAMID with your 10-character Apple Team ID (developer.apple.com → Membership)
+     here and in Notify.entitlements before the first build. See ios/README.md. -->
+<plist version="1.0">
+<dict>
+    <key>aps-environment</key>
+    <string>production</string>
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.dk.schwabejss.warden</string>
+    </array>
+    <key>keychain-access-groups</key>
+    <array>
+        <string>MISSING_TEAMID.dk.schwabejss.warden</string>
+    </array>
+</dict>
+</plist>
